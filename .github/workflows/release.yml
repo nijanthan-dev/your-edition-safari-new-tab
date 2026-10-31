@@ -1,0 +1,85 @@
+name: Release
+
+# Each push to main tags the next version and publishes a GitHub release with:
+# - morning-tab-safari-extension-<version>.zip  the Safari bundle (build the app in Xcode)
+# - morning-tab-chrome-<version>.zip            the Chrome extension
+# - SHA256SUMS.txt
+#
+# Next version: the patch after the latest vX.Y.Z tag. To jump to a new minor or
+# major version, raise "version" in apps/extension/package.json above the latest tag.
+# Pushes that change only Markdown or docs/ do not release.
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md", "docs/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# One release at a time, so two pushes never pick the same version.
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # all tags
+      - uses: pnpm/action-setup@v4 # version comes from packageManager in package.json
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - name: Pick the next version
+        id: version
+        run: |
+          base=$(node -p "require('./apps/extension/package.json').version")
+          latest=$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' | sed 's/^v//' | sort -V | tail -1)
+          if [ -z "$latest" ]; then
+            version="$base"
+          else
+            IFS=. read -r major minor patch <<< "$latest"
+            version="$major.$minor.$((patch + 1))"
+            # A package.json version above the latest tag wins (manual minor/major bump).
+            if [ "$(printf '%s\n' "$version" "$base" | sort -V | tail -1)" = "$base" ] && [ "$base" != "$latest" ]; then
+              version="$base"
+            fi
+          fi
+          echo "Releasing v$version (latest tag: ${latest:-none})"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+
+      - run: pnpm install --frozen-lockfile
+
+      # The extension manifest takes its version from this package.json.
+      - name: Stamp version
+        working-directory: apps/extension
+        run: npm pkg set version=${{ steps.version.outputs.version }}
+
+      - name: Build bundles
+        run: |
+          pnpm build
+          pnpm build:safari
+
+      - name: Package
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          mkdir dist
+          (cd apps/extension/.output/safari-mv3 && zip -qr "$GITHUB_WORKSPACE/dist/morning-tab-safari-extension-$VERSION.zip" .)
+          (cd apps/extension/.output/chrome-mv3 && zip -qr "$GITHUB_WORKSPACE/dist/morning-tab-chrome-$VERSION.zip" .)
+          (cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
+
+      - name: Tag and publish
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ steps.version.outputs.version }}
+        run: |
+          gh release create "$TAG" dist/* \
+            --target "$GITHUB_SHA" \
+            --title "Morning Tab $TAG" \
+            --generate-notes

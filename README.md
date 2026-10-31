@@ -185,6 +185,22 @@ pnpm agent:verify        # check that the output renders
 
 **Chrome.** The Chrome build still works and reads Chrome's real history. Run `npx pnpm@10.11.1 build`. In `chrome://extensions`, enable **Developer mode**, click **Load unpacked** and select `apps/extension/.output/chrome-mv3`.
 
+## Releases
+
+Each push to `main` makes a new release automatically. The workflow is [`release.yml`](.github/workflows/release.yml).
+
+1. GitHub tags the next patch version, for example `v0.1.0`, then `v0.1.1`.
+2. It builds the Safari and Chrome bundles on a standard Ubuntu runner.
+3. It publishes a [GitHub release](https://github.com/nijanthan-dev/morning-tab-safari/releases) with the 2 zip files and a `SHA256SUMS.txt` file.
+
+| To do this | Do this |
+| --- | --- |
+| Release a new minor or major version | Set `version` in `apps/extension/package.json` above the latest tag, for example `0.2.0`. Then push. |
+| Push without a release | Change only Markdown files or `docs/`. These pushes do not release. |
+| Release again without a change | Run the **Release** workflow by hand on the **Actions** tab. |
+
+The release does not contain the Mac app. To use the Safari bundle, build the app in Xcode (see [Install](#install)).
+
 ## Status
 
 Morning Tab is early and experimental. It is a tool that you run yourself, with your own key.
