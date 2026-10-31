@@ -17,6 +17,7 @@ export default function App() {
   const [blockedSites, setBlockedSites] = useState<string[]>(DEFAULT_BLOCKED_SITES);
   const [model, setModel] = useState<HomepageModel>(DEFAULT_MODEL);
   const [autoRebuild, setAutoRebuild] = useState(true);
+  const [privacyFilter, setPrivacyFilter] = useState(false);
   /** Transpiled homepage, ready for Sandpack. */
   const [renderedCode, setRenderedCode] = useState<string | null>(null);
   /** A session left mid-flight, offered as "Resume interrupted build". */
@@ -49,6 +50,7 @@ export default function App() {
         setBlockedSites(settings.blockedSites);
         setModel(settings.model);
         setAutoRebuild(settings.autoRebuild);
+        setPrivacyFilter(settings.privacyFilter);
         setResumable(activeSession ?? null);
         if (homepage?.code) setRenderedCode(toRenderable(homepage.code));
       } finally {
@@ -79,6 +81,11 @@ export default function App() {
     setModel(next);
     await saveSetting("model", next);
   }, []);
+  const togglePrivacyFilter = useCallback(async (next: boolean) => {
+    setPrivacyFilter(next);
+    await saveSetting("privacyFilter", next);
+  }, []);
+
   const toggleAutoRebuild = useCallback(async (next: boolean) => {
     setAutoRebuild(next);
     await saveSetting("autoRebuild", next);
@@ -206,6 +213,8 @@ export default function App() {
           onChangeModel={changeModel}
           autoRebuild={autoRebuild}
           onToggleAutoRebuild={toggleAutoRebuild}
+          privacyFilter={privacyFilter}
+          onTogglePrivacyFilter={togglePrivacyFilter}
           onClose={() => setShowSettings(false)}
           onSave={savePrompt}
         />

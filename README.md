@@ -62,9 +62,39 @@ Data leaves your Mac only during a build. It goes only to the Anthropic API, wit
 A build sends:
 
 - A summary of the sites you visit: top domains, visit counts and some page titles
-- The cleaned HTML of up to 8 pages
+- Up to 8 pages: the cleaned HTML, or only short summaries if the privacy filter is on
 
 Safari loads those pages with your sign-ins, so they can contain private content. Anthropic deletes the agent session and all uploaded pages when each build ends.
+
+### The on-device privacy filter (optional)
+
+The privacy filter is the main difference from the original extension. It is off by default. To turn it on, open **⚙️ Settings** and select **On-device privacy filter**.
+
+| | Filter off (default) | Filter on |
+| --- | --- | --- |
+| What goes to Anthropic for each page | The cleaned HTML of the page | A list of items: a title, one sentence and the page's own link for each |
+| Who reads the full page | Anthropic's model | Apple Intelligence, on your Mac |
+| Personal details | The agent has an instruction to skip them | The on-device model leaves them out. Then a pattern check replaces emails, phone numbers and long numbers, such as card numbers, with a placeholder. |
+| Page titles in the history summary | Sent as they are | Sent after the same pattern check |
+| If Apple Intelligence is not ready | Not needed | The page is not sent. The build continues with the other data. |
+| Needs | Nothing extra | A Mac with Apple silicon, macOS 26 or later, and Apple Intelligence turned on |
+
+How it works:
+
+1. The extension turns each page into plain text, with a number such as `[3]` for each link.
+2. The Morning Tab app gives the text to Apple's on-device model (the Foundation Models framework). The code is in [`PrivacyFilter.swift`](apps/safari/Morning%20Tab/Morning%20Tab%20Extension/PrivacyFilter.swift).
+3. The model returns items with link numbers only. It never writes a URL.
+4. The extension keeps only items whose number is a real link on the page. It builds the list from those links. The code is in [`privacy-digest.ts`](apps/extension/lib/privacy-digest.ts).
+
+To turn on Apple Intelligence:
+
+1. Open **System Settings → Apple Intelligence & Siri**.
+2. Turn on **Apple Intelligence**. Make sure that the Siri language is the same as your Mac language.
+3. Wait for the download to finish. Keep the Mac on Wi-Fi and power. The download can take 15 to 60 minutes.
+
+**Settings** shows the status of the on-device model under the filter option.
+
+The filter is a strong extra protection, not a guarantee. The on-device model can miss a personal detail. The pattern check catches only fixed formats. Use **Sites the agent never reads** for sites that you never want opened.
 
 Your API key and the visit log stay in the extension's local storage on your Mac. Safari does not sync them. For more detail, read [ARCHITECTURE.md](./ARCHITECTURE.md#privacy).
 
@@ -82,6 +112,7 @@ Your API key and the visit log stay in the extension's local storage on your Mac
 | Notification when a background build fails | Yes | No. The error shows in your next new tab. |
 | Install | Load the folder in `chrome://extensions` | Build a Mac app in Xcode. The app contains the extension. |
 | Unsigned extension | Works in Developer mode | Needs **Allow unsigned extensions**. Safari clears it each time Safari quits. |
+| On-device privacy filter | Not available | Optional. Uses Apple Intelligence on your Mac. |
 
 ### Why Morning Tab cannot read your Safari history
 
@@ -110,7 +141,7 @@ To read pages, Morning Tab opens a separate window. Chrome keeps that window beh
 
 ## Make it yours
 
-Click **⚙️ Settings** on the new tab. There are 4 settings.
+Click **⚙️ Settings** on the new tab. There are 5 settings.
 
 **1. Instructions.** The agent uses your instructions in every build. Your instructions have priority over the agent's defaults. They control the content and the look.
 
@@ -143,6 +174,8 @@ Click **Save & rebuild** to use them now.
 - It builds the first time Safari is open between 5 AM and noon. If Safari is not open that morning, it skips that day.
 - It starts only after your first manual build. It tries one time each morning at most.
 
+**5. On-device privacy filter.** This setting is off by default. When it is on, Apple Intelligence on your Mac summarizes each page first, and only the summaries go to Anthropic. See [The on-device privacy filter](#the-on-device-privacy-filter-optional).
+
 To rebuild now, click **↻ Rebuild** at the top right.
 
 ## Good to know
@@ -156,7 +189,7 @@ To rebuild now, click **↻ Rebuild** at the top right.
 ## How it works
 
 1. **`getHistory`**: the agent gets a ranked summary of the domains you visit most.
-2. **`getPageHtml`**: the agent selects up to 8 pages. The extension opens them in a background window, cleans them and gives them to the agent as files.
+2. **`getPageHtml`**: the agent selects up to 8 pages. The extension opens them in a background window and cleans them. If the privacy filter is on, the extension replaces each page with its on-device summary. Then it gives the pages to the agent as files.
 3. **`grep` / `read`**: the agent finds headlines, posts and links in those files.
 4. **`write`**: the agent writes one React component. The new tab shows it.
 

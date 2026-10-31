@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { MODEL_CHOICES, normalizeBlockList, type HomepageModel } from "@homepage/agent-core";
+import { filterUnavailableReason, PRIVACY_FILTER_SUPPORTED } from "@/lib/privacy-filter";
 import { btn } from "./ui";
 
 export function SettingsModal({
@@ -9,6 +10,8 @@ export function SettingsModal({
   onChangeModel,
   autoRebuild,
   onToggleAutoRebuild,
+  privacyFilter,
+  onTogglePrivacyFilter,
   onClose,
   onSave,
 }: {
@@ -18,11 +21,18 @@ export function SettingsModal({
   onChangeModel: (next: HomepageModel) => void;
   autoRebuild: boolean;
   onToggleAutoRebuild: (next: boolean) => void;
+  privacyFilter: boolean;
+  onTogglePrivacyFilter: (next: boolean) => void;
   onClose: () => void;
   onSave: (prompt: string, blockedSites: string[]) => void;
 }) {
   const [draft, setDraft] = useState(initialPrompt);
   const [blockedDraft, setBlockedDraft] = useState(blockedSites.join("\n"));
+  // undefined while checking; null when the on-device model is ready.
+  const [filterProblem, setFilterProblem] = useState<string | null | undefined>(undefined);
+  useEffect(() => {
+    if (PRIVACY_FILTER_SUPPORTED) void filterUnavailableReason().then(setFilterProblem);
+  }, []);
 
   return (
     <div
@@ -102,8 +112,32 @@ export function SettingsModal({
         </label>
         <p style={{ color: "#888", fontSize: 12, margin: "6px 0 0" }}>
           When on, the extension builds one morning edition a day in the background (first time
-          Chrome is open between 5am and noon), so your next tab shows a fresh one (uses your API key).
+          browser is open between 5am and noon), so your next tab shows a fresh one (uses your API key).
         </p>
+        {PRIVACY_FILTER_SUPPORTED && (
+          <>
+            <label
+              style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, color: "#333", fontSize: 14, cursor: "pointer" }}
+            >
+              <input
+                type="checkbox"
+                checked={privacyFilter}
+                onChange={(e) => onTogglePrivacyFilter(e.target.checked)}
+              />
+              On-device privacy filter
+            </label>
+            <p style={{ color: "#888", fontSize: 12, margin: "6px 0 0" }}>
+              When on, Apple Intelligence on this Mac summarizes each page and removes personal details.
+              Only the summaries go to Anthropic. If the on-device model can't run, pages are not sent.
+              <br />
+              {filterProblem === undefined
+                ? "Checking the on-device model…"
+                : filterProblem === null
+                  ? "Status: ready."
+                  : `Status: not available. ${filterProblem}.`}
+            </p>
+          </>
+        )}
         <div style={{ display: "flex", gap: 12, marginTop: 20, justifyContent: "flex-end" }}>
           <button
             onClick={onClose}

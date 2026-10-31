@@ -17,6 +17,7 @@ export default defineConfig({
         "storage", //       API key, settings, the built homepage
         "alarms", //        heartbeat: scheduled rebuilds + reattach after a worker kill
         ...(safari ? [] : ["notifications"]), // surface a failed headless rebuild when no tab is open
+      ...(safari ? ["nativeMessaging"] : []), // the on-device privacy filter in the Safari app
       ],
       // Needed to scrape arbitrary pages; also exempts api.anthropic.com from CORS.
       host_permissions: ["<all_urls>"],

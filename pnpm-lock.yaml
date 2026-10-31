@@ -23,6 +23,9 @@ importers:
       '@homepage/agent-core':
         specifier: workspace:*
         version: link:../../packages/agent-core
+      htmlparser2:
+        specifier: ^12.0.0
+        version: 12.0.0
       react:
         specifier: ^19.1.0
         version: 19.3.0

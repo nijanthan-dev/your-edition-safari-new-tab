@@ -72,6 +72,7 @@
           ],
         },
         { "path": "SafariWebExtensionHandler.swift", "target-membership": [ "Morning Tab Extension/compile-sources" ] },
+        { "path": "PrivacyFilter.swift", "target-membership": [ "Morning Tab Extension/compile-sources" ] },
         { "path": "Info.plist" },
       ],
     }, {
@@ -170,6 +171,8 @@
         "OTHER_LDFLAGS": [
           "-framework",
           "SafariServices",
+          "-weak_framework",
+          "FoundationModels",
         ],
         "PRODUCT_BUNDLE_IDENTIFIER": "io.github.nijanthan-dev.morning-tab.Extension",
         "PRODUCT_NAME": "$(TARGET_NAME)",

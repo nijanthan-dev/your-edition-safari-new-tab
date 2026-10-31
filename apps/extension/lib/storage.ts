@@ -20,6 +20,8 @@ export const KEYS = {
   blockedSites: "blockedSites",
   model: "model",
   autoRebuild: "autoRebuild",
+  /** Safari only: send pages through the on-device privacy filter first. */
+  privacyFilter: "privacyFilter",
   /** ISO timestamp of the last auto-build *attempted* (success or not). */
   lastAutoBuildAttempt: "lastAutoBuildAttempt",
   /** Throttled mirror of the live build state, for tabs that open while the worker sleeps. */
@@ -42,6 +44,8 @@ export interface Settings {
   model: HomepageModel;
   /** Unset means on — auto-rebuild is opt-out. */
   autoRebuild: boolean;
+  /** Unset means off — the filter needs Apple Intelligence, which not every Mac has. */
+  privacyFilter: boolean;
 }
 
 /** The `KVStore` agent-core persists its agent/environment/session IDs through. */
@@ -65,6 +69,7 @@ export async function loadSettings(): Promise<Settings> {
     KEYS.blockedSites,
     KEYS.model,
     KEYS.autoRebuild,
+    KEYS.privacyFilter,
   ]);
   const model = s[KEYS.model] as string | undefined;
   return {
@@ -74,10 +79,11 @@ export async function loadSettings(): Promise<Settings> {
     // Fall back if a stored model is no longer offered.
     model: MODEL_CHOICES.find((m) => m.id === model)?.id ?? DEFAULT_MODEL,
     autoRebuild: s[KEYS.autoRebuild] !== false,
+    privacyFilter: s[KEYS.privacyFilter] === true,
   };
 }
 
-export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "model" | "autoRebuild">(
+export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "model" | "autoRebuild" | "privacyFilter">(
   key: K,
   value: Settings[K],
 ): Promise<void> {

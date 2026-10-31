@@ -79,13 +79,21 @@ apps/extension/           MV3 extension (WXT + React)
     newtab/               the new-tab UI (thin client onto the worker)
   lib/
     build-manager.ts      single-flight build host, broadcast, keepalive, reattach
-    browser-bridge.ts     BrowserBridge over chrome.history / chrome.tabs
-    history.ts            getHistory: group and rank chrome.history by domain
+    browser-bridge.ts     BrowserBridge over chrome.history / chrome.tabs (+ the privacy filter when on)
+    history.ts            getHistory: group and rank history by domain
+    visit-log.ts          Safari: the extension's own log of page loads (no history API)
     scraper.ts            getPageHtml: load URLs in a background window, sanitize HTML
+    privacy-filter.ts     Safari: send pages to the app's on-device model via native messaging
+    privacy-digest.ts     pure half: page → [n]-numbered text, model items → HTML, redaction
     protocol.ts           page ↔ worker messages and the five UI build steps
     auto-rebuild.ts       when to rebuild on a schedule
     storage.ts            every chrome.storage key, settings, saved homepage
     transpile.ts          TSX → JS for the preview
+
+apps/safari/Morning Tab/  Xcode project: the Mac app that carries the extension
+  Morning Tab Extension/
+    SafariWebExtensionHandler.swift  answers sendNativeMessage ("status", "summarize")
+    PrivacyFilter.swift              Foundation Models session: one chunk in, items out
 
 harness/                  Bun scripts: drive agent-core with a fixture/fetch bridge, test the extension
 ```
@@ -151,6 +159,21 @@ private. That address is only reported when the extension's own API requests
 connect to a public address; behind a proxy at a private address, or when Chrome
 reports no address, the name check is all there is. History digests still list
 such a domain. Subresource loads are not intercepted.
+
+**On-device privacy filter (Safari, opt-in).** With the setting on, the bridge
+passes every scraped page through `filterPages` before agent-core sees it. The
+page becomes plain text with links replaced by `[n]` markers, split into chunks
+of at most 6,000 characters (4 per page) to fit the on-device model's 4,096-token
+context. Each chunk goes over `runtime.sendNativeMessage` to
+`SafariWebExtensionHandler`, which runs a Foundation Models session with guided
+generation (`@Generable`) and returns `{ link, title, summary }` items. The model
+never writes a URL: items whose `link` is not a marker on the page are dropped,
+and hrefs are taken from the page. Titles, summaries and history titles then pass
+a regex redaction (emails, phone numbers, long digit runs). The filter fails
+closed: if the model is unavailable or a request fails, the page is reported in
+`failed` and nothing from it is uploaded. The native handler logs only error
+types, never page text. Redaction is best effort; the blocked-sites list is still
+the hard control.
 
 The session event log persists every domain, title and scraped page body server-side
 until deleted, and uploaded files persist independently. `runHomepageBuild` deletes
