@@ -99,7 +99,9 @@ if pgrep -xq Safari; then
 fi
 
 echo "Building the extension bundle (version $VERSION, build $BUILD_NUMBER)..."
-(cd "$ROOT/apps/extension" && MORNING_TAB_VERSION="$VERSION" npx wxt build -b safari --mv3 >/dev/null)
+WXT_LOG="$BUILD_DIR/wxt.log"
+(cd "$ROOT/apps/extension" && MORNING_TAB_VERSION="$VERSION" ./node_modules/.bin/wxt build -b safari --mv3) \
+  >"$WXT_LOG" 2>&1 || { cat "$WXT_LOG" >&2; exit 1; }
 
 echo "Building $APP_NAME..."
 # Xcode prints harmless notes on every build. Show its output only when it fails.
