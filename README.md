@@ -27,7 +27,7 @@ You need:
 
 - A Mac with Xcode 27 or later
 - [Node.js](https://nodejs.org) 20 or later
-- An [Anthropic API key](https://console.anthropic.com)
+- An API key from [Anthropic](https://console.anthropic.com) or [BharatCode](https://bharatcode.ai)
 
 ### Part 1 of 2: Build and install the app (about 5 minutes)
 
@@ -61,11 +61,11 @@ The password stays in your keychain. The script uses only the profile name.
 ### Part 2 of 2: Enable the extension in Safari (about 5 minutes)
 
 1. Open **Safari → Settings → Advanced**. Select **Show features for web developers**.
-2. Open **Develop → Developer Settings…**. Select **Allow unsigned extensions**.
+2. Open **Develop → Developer Settings…**. Select **Allow unsigned extensions**. If you signed and notarized the app (see above), skip this step.
 3. Open **Settings → Extensions**. Enable **Morning Tab**. Click **Always Allow on Every Website…**. Morning Tab needs this access to reach the Anthropic API and to read your pages.
 4. Open **Settings → General**. Set **New tabs open with** to **Morning Tab**.
 
-> Safari clears **Allow unsigned extensions** each time Safari quits. After a restart, do step 2 again.
+> Safari clears **Allow unsigned extensions** each time Safari quits. After a restart, do step 2 again. A signed and notarized app does not need this setting.
 
 ### If something goes wrong
 
@@ -86,13 +86,14 @@ To find every copy that macOS knows about, run this command:
 ## Build your first homepage
 
 1. Open a new tab.
-2. Choose **Anthropic (Claude)** or **BharatCode**, and paste that provider's API key. Click **Save key**.
-3. Optional: select **On-device privacy filter**. Do this before the first build if you want no page content to leave your Mac. The status line shows if Apple Intelligence is ready.
-4. Click **Build today's homepage**.
+2. Choose **Anthropic (Claude)** or **BharatCode**, and paste that provider's API key. For BharatCode, also choose the model: **qwen-3.8-27b** or **deepseek-v4.1-flash**. Click **Save key**.
+3. The next screen shows your provider, for example "Provider: BharatCode, qwen-3.8-27b". To change the provider, the model or the key, click **Change** or **⚙️ Settings**.
+4. Optional: select **On-device privacy filter**. Do this before the first build if you want no page content to leave your Mac. The status line shows if Apple Intelligence is ready.
+5. Click **Build today's homepage**.
 
 The first build takes a few minutes. The progress view shows each step as the agent works.
 
-You can close the tab during a build. The build runs in the extension's background worker. Any new tab shows the build.
+**Keep a Morning Tab tab open until the build finishes.** The build runs in the extension's background worker, and any new tab shows it. But Safari can stop that worker when no Morning Tab tab is open. Then an Anthropic build resumes later. A BharatCode build starts again, and it reuses the pages that it read in the last 2 hours.
 
 > **Your first homepage is thin.** Safari has no history for the agent to read (see below). To fix this now, [import your Safari history](#improve-this-tab-import-your-safari-history). Otherwise, the homepage gets better over the first few days.
 
@@ -169,7 +170,7 @@ Morning Tab can use 2 kinds of provider. Select one in **⚙️ Settings → Mod
 | First homepage | Full, from day one | Thin. It gets better over the first few days. |
 | Notification when a background build fails | Yes | No. The error shows in your next new tab. |
 | Install | Load the folder in `chrome://extensions` | Build a Mac app in Xcode. The app contains the extension. |
-| Unsigned extension | Works in Developer mode | Needs **Allow unsigned extensions**. Safari clears it each time Safari quits. |
+| Unsigned extension | Works in Developer mode | Needs **Allow unsigned extensions**. Safari clears it each time Safari quits. A signed and notarized build does not need it. |
 | On-device privacy filter | Not available | Optional. Uses Apple Intelligence on your Mac. |
 
 ### Why Morning Tab cannot read your Safari history
@@ -214,7 +215,7 @@ To read pages, Morning Tab opens a separate window. Chrome keeps that window beh
 
 ## Make it yours
 
-Click **⚙️ Settings** on the new tab. There are 5 settings.
+Click **⚙️ Settings** on the new tab. It is also on the first-build screen, before your first homepage exists. There are 5 settings.
 
 **1. Instructions.** The agent uses your instructions in every build. Your instructions have priority over the agent's defaults. They control the content and the look.
 
@@ -235,14 +236,15 @@ Click **Save & rebuild** to use them now.
 - If a page redirects to a blocked host, the extension drops the page before upload.
 - The extension always blocks local network addresses: localhost, private IPs, and `.local` and `.internal` hosts.
 
-**3. Model provider and model.** Select **Anthropic (Claude)** or **BharatCode or another OpenAI-compatible API**, and enter that provider's API key. See [Model providers](#model-providers). For Anthropic, select the Claude model that writes your page.
+**3. Model provider and model.** Select **Anthropic (Claude)** or **BharatCode or another OpenAI-compatible API**. Then select that provider's model and enter its API key. See [Model providers](#model-providers).
+
+| Provider | Models |
+| --- | --- |
+| Anthropic | **Claude Sonnet 5.5** (default): the best balance of quality and cost. **Claude Haiku 5.5**: the fastest and the cheapest. **Claude Opus 5.5**: the most careful, and the most expensive. |
+| BharatCode | **qwen-3.8-27b** (default). **deepseek-v4.1-flash**: needs the Pro plan. |
 
 - If no build is running, the new choice applies from your next build.
 - If a build is running, Morning Tab restarts it with the new provider or key. Pages read in the last 2 hours come from the page cache, so the restart does not open them again. Only the model's work starts over.
-
-- **Claude Sonnet 5.5** (default): the best balance of quality and cost
-- **Claude Haiku 5.5**: the fastest and the cheapest
-- **Claude Opus 5.5**: the most careful, and the most expensive
 
 **4. Rebuild automatically each morning.** This setting is on by default.
 

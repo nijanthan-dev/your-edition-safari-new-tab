@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { DEFAULT_MODEL, DEFAULT_BLOCKED_SITES, type HomepageModel } from "@homepage/agent-core";
+import { DEFAULT_MODEL, DEFAULT_BLOCKED_SITES, MODEL_CHOICES, type HomepageModel } from "@homepage/agent-core";
 import { BUILD_STEPS } from "@/lib/protocol";
-import { KEYS, extensionStore, hasProviderKey, loadHomepage, loadSettings, saveSetting, type Provider } from "@/lib/storage";
+import { KEYS, extensionStore, hasProviderKey, loadHomepage, loadSettings, saveSetting, type Provider, type Settings } from "@/lib/storage";
 import { toRenderable } from "@/lib/transpile";
 import { ApiKeySetup } from "./components/ApiKeySetup";
 import { BuildProgress } from "./components/BuildProgress";
@@ -12,6 +12,19 @@ import { SettingsModal } from "./components/SettingsModal";
 import { btn, errorBox } from "./components/ui";
 import { useHomepageBuild } from "./useHomepageBuild";
 
+const hostOf = (url: string) => {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+};
+
+const describeProvider = (s: Settings) =>
+  s.provider === "chat"
+    ? `${s.chatBaseUrl.includes("bharatcode.ai") ? "BharatCode" : hostOf(s.chatBaseUrl)}, ${s.chatModel}`
+    : `Anthropic, ${MODEL_CHOICES.find((m) => m.id === s.model)?.label ?? s.model}`;
+
 export default function App() {
   const [loading, setLoading] = useState(true);
   /** Whether the chosen provider has a key; until then the key screen shows. */
@@ -21,6 +34,8 @@ export default function App() {
   const [model, setModel] = useState<HomepageModel>(DEFAULT_MODEL);
   const [autoRebuild, setAutoRebuild] = useState(true);
   const [privacyFilter, setPrivacyFilter] = useState(false);
+  /** Shown on the first-build screen, e.g. "BharatCode, qwen-3.8-27b". Refreshed when Settings closes. */
+  const [providerLabel, setProviderLabel] = useState("");
   /** Transpiled homepage, ready for Sandpack. */
   const [renderedCode, setRenderedCode] = useState<string | null>(null);
   /** A session left mid-flight, offered as "Resume interrupted build". */
@@ -54,6 +69,7 @@ export default function App() {
         setModel(settings.model);
         setAutoRebuild(settings.autoRebuild);
         setPrivacyFilter(settings.privacyFilter);
+        setProviderLabel(describeProvider(settings));
         setResumable(activeSession ?? null);
         if (homepage?.code) setRenderedCode(toRenderable(homepage.code));
       } finally {
@@ -62,9 +78,22 @@ export default function App() {
     })();
   }, []);
 
-  const saveKey = useCallback(async (provider: Provider, key: string) => {
-    await Promise.all([saveSetting("provider", provider), saveSetting(provider === "chat" ? "chatApiKey" : "apiKey", key)]);
+  const saveKey = useCallback(async (provider: Provider, key: string, chatModel?: string) => {
+    await Promise.all([
+      saveSetting("provider", provider),
+      saveSetting(provider === "chat" ? "chatApiKey" : "apiKey", key),
+      chatModel ? saveSetting("chatModel", chatModel) : undefined,
+    ]);
+    setProviderLabel(describeProvider(await loadSettings()));
     setConnected(true);
+  }, []);
+
+  // Settings saves the provider and keys itself; re-read them for the provider line.
+  const closeSettings = useCallback(async () => {
+    setShowSettings(false);
+    const settings = await loadSettings();
+    setProviderLabel(describeProvider(settings));
+    setConnected(hasProviderKey(settings));
   }, []);
 
   const savePrompt = useCallback(
@@ -94,6 +123,21 @@ export default function App() {
     await saveSetting("autoRebuild", next);
   }, []);
 
+  const settingsModal = showSettings && (
+        <SettingsModal
+          initialPrompt={systemPrompt}
+          blockedSites={blockedSites}
+          model={model}
+          onChangeModel={changeModel}
+          autoRebuild={autoRebuild}
+          onToggleAutoRebuild={toggleAutoRebuild}
+          privacyFilter={privacyFilter}
+          onTogglePrivacyFilter={togglePrivacyFilter}
+          onClose={() => void closeSettings()}
+          onSave={savePrompt}
+        />
+  );
+
   if (loading) return <div style={{ padding: 20, textAlign: "center" }}>Loading…</div>;
   if (!connected) return <ApiKeySetup onSave={saveKey} />;
 
@@ -116,6 +160,15 @@ export default function App() {
           The agent reads your browsing history, opens the pages you actually follow, and writes a
           homepage from what it finds today.
         </p>
+        <p style={{ color: "#333", fontSize: 14, margin: "12px 0 0" }}>
+          Provider: {providerLabel}.{" "}
+          <button
+            onClick={() => setShowSettings(true)}
+            style={{ background: "none", border: "none", padding: 0, color: "#0066cc", cursor: "pointer", fontSize: 14 }}
+          >
+            Change
+          </button>
+        </p>
         <PrivacyFilterOption checked={privacyFilter} onChange={togglePrivacyFilter} />
         <ImproveTabPanel />
         {state.error && (
@@ -125,12 +178,16 @@ export default function App() {
           <button style={btn} onClick={() => build()}>
             Build today&apos;s homepage
           </button>
+          <button style={{ ...btn, backgroundColor: "white", color: "#333", border: "1px solid #ddd" }} onClick={() => setShowSettings(true)}>
+            ⚙️ Settings
+          </button>
           {resumable && (
             <button style={{ ...btn, backgroundColor: "#555" }} onClick={() => build({ resume: true })}>
               Resume interrupted build
             </button>
           )}
         </div>
+        {settingsModal}
       </div>
     );
   }
@@ -210,20 +267,7 @@ export default function App() {
 
       <HomepagePreview code={renderedCode} />
 
-      {showSettings && (
-        <SettingsModal
-          initialPrompt={systemPrompt}
-          blockedSites={blockedSites}
-          model={model}
-          onChangeModel={changeModel}
-          autoRebuild={autoRebuild}
-          onToggleAutoRebuild={toggleAutoRebuild}
-          privacyFilter={privacyFilter}
-          onTogglePrivacyFilter={togglePrivacyFilter}
-          onClose={() => setShowSettings(false)}
-          onSave={savePrompt}
-        />
-      )}
+      {settingsModal}
     </div>
   );
 }

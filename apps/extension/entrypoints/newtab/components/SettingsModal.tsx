@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { MODEL_CHOICES, normalizeBlockList, type HomepageModel } from "@homepage/agent-core";
+import { normalizeBlockList, type HomepageModel } from "@homepage/agent-core";
 import { ImproveTabPanel } from "./ImproveTabPanel";
 import { PrivacyFilterOption } from "./PrivacyFilterOption";
 import { ProviderOption } from "./ProviderOption";
@@ -73,23 +73,7 @@ export function SettingsModal({
         <p id="blocked-sites-help" style={{ color: "#888", fontSize: 12, margin: "6px 0 0" }}>
           One per line. Subdomains are included. Use *.example.com for wildcards.
         </p>
-        <ProviderOption />
-        <label
-          style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, color: "#333", fontSize: 14 }}
-        >
-          Claude model
-          <select
-            value={model}
-            onChange={(e) => onChangeModel(e.target.value as HomepageModel)}
-            style={{ padding: "4px 8px", fontSize: 14, borderRadius: 4, border: "1px solid #ddd" }}
-          >
-            {MODEL_CHOICES.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
-        </label>
+        <ProviderOption claudeModel={model} onChangeClaudeModel={onChangeModel} />
         <label
           style={{
             display: "flex",
