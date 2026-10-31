@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { normalizeBlockList, type HomepageModel } from "@homepage/agent-core";
+import { normalizeBlockList } from "@homepage/agent-core";
 import { ImproveTabPanel } from "./ImproveTabPanel";
 import { PrivacyFilterOption } from "./PrivacyFilterOption";
 import { ProviderOption } from "./ProviderOption";
@@ -8,8 +8,6 @@ import { btn } from "./ui";
 export function SettingsModal({
   initialPrompt,
   blockedSites,
-  model,
-  onChangeModel,
   autoRebuild,
   onToggleAutoRebuild,
   privacyFilter,
@@ -19,8 +17,6 @@ export function SettingsModal({
 }: {
   initialPrompt: string;
   blockedSites: string[];
-  model: HomepageModel;
-  onChangeModel: (next: HomepageModel) => void;
   autoRebuild: boolean;
   onToggleAutoRebuild: (next: boolean) => void;
   privacyFilter: boolean;
@@ -73,7 +69,7 @@ export function SettingsModal({
         <p id="blocked-sites-help" style={{ color: "#888", fontSize: 12, margin: "6px 0 0" }}>
           One per line. Subdomains are included. Use *.example.com for wildcards.
         </p>
-        <ProviderOption claudeModel={model} onChangeClaudeModel={onChangeModel} />
+        <ProviderOption />
         <label
           style={{
             display: "flex",

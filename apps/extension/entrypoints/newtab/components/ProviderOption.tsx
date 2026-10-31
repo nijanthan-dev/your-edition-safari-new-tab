@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { CHAT_PROVIDER_PRESETS, MODEL_CHOICES, type HomepageModel } from "@homepage/agent-core";
+import { CHAT_PROVIDER_PRESETS } from "@homepage/agent-core";
 import { loadSettings, saveSetting, type Provider } from "@/lib/storage";
 
 const BHARATCODE = CHAT_PROVIDER_PRESETS[0];
@@ -20,13 +20,7 @@ export function ChatProviderNote() {
 }
 
 /** The model provider and its key, base URL and model. Saved on each change. */
-export function ProviderOption({
-  claudeModel,
-  onChangeClaudeModel,
-}: {
-  claudeModel: HomepageModel;
-  onChangeClaudeModel: (next: HomepageModel) => void;
-}) {
+export function ProviderOption() {
   const [provider, setProvider] = useState<Provider>("anthropic");
   const [baseUrl, setBaseUrl] = useState<string>(BHARATCODE.baseUrl);
   const [model, setModel] = useState<string>(BHARATCODE.models[0]);
@@ -59,17 +53,8 @@ export function ProviderOption({
         </select>
       </label>
       {provider === "anthropic" && (
-        <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
-        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          Model
-          <select value={claudeModel} onChange={(e) => onChangeClaudeModel(e.target.value as HomepageModel)} style={field}>
-            {MODEL_CHOICES.map((m) => (
-              <option key={m.id} value={m.id}>{m.label}</option>
-            ))}
-          </select>
-        </label>
-        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          API key
+        <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+          Anthropic API key
           <input
             type="password"
             value={anthropicKey}
@@ -82,7 +67,6 @@ export function ProviderOption({
             style={{ ...field, flex: 1, fontFamily: "ui-monospace, monospace" }}
           />
         </label>
-        </div>
       )}
       <p style={help}>
         Changing the provider or a key during a build restarts the build with the new settings.

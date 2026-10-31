@@ -1,10 +1,7 @@
 import {
   CHAT_PROVIDER_PRESETS,
-  DEFAULT_MODEL,
   DEFAULT_BLOCKED_SITES,
-  MODEL_CHOICES,
   STORAGE_KEYS as AGENT_KEYS,
-  type HomepageModel,
   type KVStore,
 } from "@homepage/agent-core";
 
@@ -19,7 +16,6 @@ export const KEYS = {
   homepage: "homepageData",
   systemPrompt: "systemPrompt",
   blockedSites: "blockedSites",
-  model: "model",
   autoRebuild: "autoRebuild",
   /** Safari only: send pages through the on-device privacy filter first. */
   privacyFilter: "privacyFilter",
@@ -49,7 +45,6 @@ export interface Settings {
   apiKey: string | null;
   systemPrompt: string;
   blockedSites: string[];
-  model: HomepageModel;
   /** Unset means on — auto-rebuild is opt-out. */
   autoRebuild: boolean;
   /** Unset means off — the filter needs Apple Intelligence, which not every Mac has. */
@@ -87,7 +82,6 @@ export async function loadSettings(): Promise<Settings> {
     KEYS.apiKey,
     KEYS.systemPrompt,
     KEYS.blockedSites,
-    KEYS.model,
     KEYS.autoRebuild,
     KEYS.privacyFilter,
     KEYS.provider,
@@ -95,13 +89,10 @@ export async function loadSettings(): Promise<Settings> {
     KEYS.chatBaseUrl,
     KEYS.chatModel,
   ]);
-  const model = s[KEYS.model] as string | undefined;
   return {
     apiKey: (s[KEYS.apiKey] as string | undefined) ?? null,
     systemPrompt: (s[KEYS.systemPrompt] as string | undefined) ?? "",
     blockedSites: (s[KEYS.blockedSites] as string[] | undefined) ?? [...DEFAULT_BLOCKED_SITES],
-    // Fall back if a stored model is no longer offered.
-    model: MODEL_CHOICES.find((m) => m.id === model)?.id ?? DEFAULT_MODEL,
     autoRebuild: s[KEYS.autoRebuild] !== false,
     privacyFilter: s[KEYS.privacyFilter] === true,
     provider: s[KEYS.provider] === "chat" ? "chat" : "anthropic",
@@ -111,7 +102,7 @@ export async function loadSettings(): Promise<Settings> {
   };
 }
 
-export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "model" | "autoRebuild" | "privacyFilter" | "provider" | "chatApiKey" | "chatBaseUrl" | "chatModel">(
+export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "autoRebuild" | "privacyFilter" | "provider" | "chatApiKey" | "chatBaseUrl" | "chatModel">(
   key: K,
   value: Settings[K],
 ): Promise<void> {

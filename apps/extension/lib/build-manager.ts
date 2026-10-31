@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { runHomepageBuild, runHomepageBuildChat, type RunPhase } from "@homepage/agent-core";
+import { DEFAULT_MODEL, runHomepageBuild, runHomepageBuildChat, type RunPhase } from "@homepage/agent-core";
 import { shouldAutoRebuild } from "./auto-rebuild";
 import { browserBridge } from "./browser-bridge";
 import { explainBuildError } from "./host-access";
@@ -151,7 +151,7 @@ export class BuildManager {
 
     try {
       const settings = await loadSettings();
-      const { apiKey, systemPrompt, model } = settings;
+      const { apiKey, systemPrompt } = settings;
       if (!hasProviderKey(settings)) {
         // Manual builds are gated behind the key-setup screen and auto-builds
         // require a key, so this only happens if the key was removed.
@@ -198,7 +198,8 @@ export class BuildManager {
               store: extensionStore,
               userSystemPrompt: systemPrompt,
               blockedSites,
-              model,
+              // Anthropic always uses the default Claude model; there is no model choice.
+              model: DEFAULT_MODEL,
               resumeSessionId: opts.resume ? await extensionStore.get<string>(KEYS.activeSessionId) : undefined,
               signal: this.controller.signal,
               callbacks,

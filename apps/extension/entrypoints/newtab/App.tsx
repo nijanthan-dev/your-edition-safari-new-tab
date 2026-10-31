@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { DEFAULT_MODEL, DEFAULT_BLOCKED_SITES, MODEL_CHOICES, type HomepageModel } from "@homepage/agent-core";
+import { DEFAULT_BLOCKED_SITES } from "@homepage/agent-core";
 import { BUILD_STEPS } from "@/lib/protocol";
 import { KEYS, extensionStore, hasProviderKey, loadHomepage, loadSettings, saveSetting, type Provider, type Settings } from "@/lib/storage";
 import { toRenderable } from "@/lib/transpile";
@@ -23,7 +23,7 @@ const hostOf = (url: string) => {
 const describeProvider = (s: Settings) =>
   s.provider === "chat"
     ? `${s.chatBaseUrl.includes("bharatcode.ai") ? "BharatCode" : hostOf(s.chatBaseUrl)}, ${s.chatModel}`
-    : `Anthropic, ${MODEL_CHOICES.find((m) => m.id === s.model)?.label ?? s.model}`;
+    : "Anthropic (Claude)";
 
 export default function App() {
   const [loading, setLoading] = useState(true);
@@ -31,7 +31,6 @@ export default function App() {
   const [connected, setConnected] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [blockedSites, setBlockedSites] = useState<string[]>(DEFAULT_BLOCKED_SITES);
-  const [model, setModel] = useState<HomepageModel>(DEFAULT_MODEL);
   const [autoRebuild, setAutoRebuild] = useState(true);
   const [privacyFilter, setPrivacyFilter] = useState(false);
   /** Shown on the first-build screen, e.g. "BharatCode, qwen-3.8-27b". Refreshed when Settings closes. */
@@ -66,7 +65,6 @@ export default function App() {
         setConnected(hasProviderKey(settings));
         setSystemPrompt(settings.systemPrompt);
         setBlockedSites(settings.blockedSites);
-        setModel(settings.model);
         setAutoRebuild(settings.autoRebuild);
         setPrivacyFilter(settings.privacyFilter);
         setProviderLabel(describeProvider(settings));
@@ -109,10 +107,6 @@ export default function App() {
   );
 
   // These persist immediately; the worker reads them on its next heartbeat or build.
-  const changeModel = useCallback(async (next: HomepageModel) => {
-    setModel(next);
-    await saveSetting("model", next);
-  }, []);
   const togglePrivacyFilter = useCallback(async (next: boolean) => {
     setPrivacyFilter(next);
     await saveSetting("privacyFilter", next);
@@ -127,8 +121,6 @@ export default function App() {
         <SettingsModal
           initialPrompt={systemPrompt}
           blockedSites={blockedSites}
-          model={model}
-          onChangeModel={changeModel}
           autoRebuild={autoRebuild}
           onToggleAutoRebuild={toggleAutoRebuild}
           privacyFilter={privacyFilter}

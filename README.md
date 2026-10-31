@@ -146,7 +146,7 @@ Morning Tab can use 2 kinds of provider. Select one in **⚙️ Settings → Mod
 
 | | Anthropic (Claude), the default | BharatCode |
 | --- | --- | --- |
-| Models | Claude Sonnet, Haiku or Opus | Qwen 3.8 27B or DeepSeek V4.1 Flash (open models) |
+| Models | Claude Sonnet 5.5. There is no model choice. | Qwen 3.8 27B or DeepSeek V4.1 Flash (open models). You choose one. |
 | Cost | Pay for each build, by tokens | A flat monthly fee: ₹399 (Qwen only) or ₹999 (both models) |
 | How the agent runs | Claude Managed Agents: a session with a sandbox for the pages | A chat loop in the extension. The extension holds the pages in memory and answers the agent's file tools itself. |
 | What happens to your data | Morning Tab deletes the session and the uploaded pages after each build | BharatCode sends prompts to inference partners, some outside India. The Free and Lite plans may keep logs. See its [privacy policy](https://bharatcode.ai/privacy). |
@@ -236,12 +236,12 @@ Click **Save & rebuild** to use them now.
 - If a page redirects to a blocked host, the extension drops the page before upload.
 - The extension always blocks local network addresses: localhost, private IPs, and `.local` and `.internal` hosts.
 
-**3. Model provider and model.** Select **Anthropic (Claude)** or **BharatCode or another OpenAI-compatible API**. Then select that provider's model and enter its API key. See [Model providers](#model-providers).
+**3. Model provider.** Select **Anthropic (Claude)** or **BharatCode or another OpenAI-compatible API**. See [Model providers](#model-providers).
 
-| Provider | Models |
+| Provider | What you enter |
 | --- | --- |
-| Anthropic | **Claude Sonnet 5.5** (default): the best balance of quality and cost. **Claude Haiku 5.5**: the fastest and the cheapest. **Claude Opus 5.5**: the most careful, and the most expensive. |
-| BharatCode | **qwen-3.8-27b** (default). **deepseek-v4.1-flash**: needs the Pro plan. |
+| Anthropic | Only your **Anthropic API key**. Morning Tab always uses Claude Sonnet 5.5. |
+| BharatCode | Your BharatCode API key and the model: **qwen-3.8-27b** (default) or **deepseek-v4.1-flash** (needs the Pro plan). |
 
 - If no build is running, the new choice applies from your next build.
 - If a build is running, Morning Tab restarts it with the new provider or key. Pages read in the last 2 hours come from the page cache, so the restart does not open them again. Only the model's work starts over.
@@ -258,7 +258,7 @@ To rebuild now, click **↻ Rebuild** at the top right.
 
 ## Good to know
 
-- **Cost.** Your API key pays for each build. The cost depends on the model and on the quantity of text the agent reads. Haiku costs the least. To build only when you ask, disable automatic rebuilds.
+- **Cost.** Your API key pays for each build. The cost depends on the provider and on the quantity of text the agent reads. BharatCode charges a flat monthly fee instead. To build only when you ask, disable automatic rebuilds.
 - **What the agent reads.** The agent ranks the sites you visit and opens up to 8 of them in each build. It skips search engines, webmail, banking and logged-out marketing pages. If it cannot open a page, it reports the failure.
 - **Links are real.** Each link on your page comes from a page that the agent read. The agent has an instruction to never invent a URL.
 - **Interrupted builds.** If Safari closes during a build, the next new tab shows **Resume interrupted build**.

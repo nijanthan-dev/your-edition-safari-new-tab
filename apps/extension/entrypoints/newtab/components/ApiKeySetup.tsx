@@ -32,7 +32,7 @@ export function ApiKeySetup({ onSave }: { onSave: (provider: Provider, key: stri
         type="password"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder={provider === "anthropic" ? "sk-ant-..." : "Your BharatCode API key"}
+        placeholder={provider === "anthropic" ? "Anthropic API key (sk-ant-...)" : "Your BharatCode API key"}
         style={{
           width: "100%",
           padding: 12,
