@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { BHARATCODE } from "@homepage/agent-core";
-import { isAnthropicKey, type Provider } from "@/lib/storage";
+import { providerKeyProblem, type Provider } from "@/lib/storage";
 import { ChatModelSelect, ChatProviderNote } from "./ProviderOption";
 import { btn } from "./ui";
 
@@ -9,7 +9,7 @@ export function ApiKeySetup({ onSave }: { onSave: (provider: Provider, key: stri
   const [chatModel, setChatModel] = useState<string>(BHARATCODE.models[0]);
   const [value, setValue] = useState("");
   const key = value.trim();
-  const valid = provider === "anthropic" ? isAnthropicKey(key) : key.length > 0;
+  const valid = providerKeyProblem({ provider, apiKey: key, chatApiKey: key }) === null;
 
   return (
     <div style={{ maxWidth: 520, margin: "12vh auto", padding: 24, fontFamily: "system-ui" }}>

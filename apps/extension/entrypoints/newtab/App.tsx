@@ -55,6 +55,15 @@ export default function App() {
     setResumable(settings.provider === "anthropic" ? (activeSession ?? null) : null);
   }, []);
 
+  /** Read the saved provider and any interrupted session again, after a save. */
+  const refreshProvider = useCallback(async () => {
+    const [settings, activeSession] = await Promise.all([
+      loadSettings(),
+      extensionStore.get<string>(KEYS.activeSessionId),
+    ]);
+    applyProvider(settings, activeSession);
+  }, [applyProvider]);
+
   // Once a build finishes, drop back to the homepage view.
   useEffect(() => {
     if (!state.running) setViewProgress(false);
@@ -89,18 +98,14 @@ export default function App() {
       provider,
       ...(provider === "chat" ? { chatApiKey: key, chatModel: chatModel ?? current.chatModel } : { apiKey: key }),
     });
-    applyProvider(await loadSettings(), await extensionStore.get<string>(KEYS.activeSessionId));
-  }, [applyProvider]);
+    await refreshProvider();
+  }, [refreshProvider]);
 
   // Settings saves the provider and keys itself; re-read them for the provider line.
   const closeSettings = useCallback(async () => {
     setShowSettings(false);
-    const [settings, activeSession] = await Promise.all([
-      loadSettings(),
-      extensionStore.get<string>(KEYS.activeSessionId),
-    ]);
-    applyProvider(settings, activeSession);
-  }, [applyProvider]);
+    await refreshProvider();
+  }, [refreshProvider]);
 
   const savePrompt = useCallback(
     async (prompt: string, sites: string[]) => {

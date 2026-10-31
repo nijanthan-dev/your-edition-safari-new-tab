@@ -116,7 +116,9 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
   const emit = toEmit(callbacks);
   const endpoint = `${opts.baseUrl.replace(/\/+$/, "")}/chat/completions`;
   const host = new URL(endpoint).host;
-  const files = new Map<string, string>();
+  // Split each file into lines once, when it is stored: grep and read run many times.
+  const files = new Map<string, { text: string; lines: string[] }>();
+  const store = (path: string, text: string) => files.set(path, { text, lines: text.split("\n") });
   const blockedSites = () => resolveBlockedSites(opts.blockedSites);
 
   const tools: Record<string, (args: Record<string, unknown>) => Promise<string>> = {
@@ -129,7 +131,7 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
       const { pages, blocked, failed } = await loadAllowedPages({ urls, loadDelayMs }, opts.bridge, emit, await blockedSites());
       const stored = pages.map((page, i) => {
         const path = `${PAGE_ROOT}/${slugifyUrl(page.url)}_${i}.html`;
-        files.set(path, toLines(page.html));
+        store(path, toLines(page.html));
         emit.log(`stored ${page.url} -> ${path} (${page.html.length}b)`);
         return { url: page.url, title: page.title, path, bytes: page.html.length };
       });
@@ -137,7 +139,7 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
     },
 
     listFiles: async () =>
-      JSON.stringify([...files].map(([path, text]) => ({ path, bytes: text.length }))),
+      JSON.stringify([...files].map(([path, file]) => ({ path, bytes: file.text.length }))),
 
     grep: async (args) => {
       emit.phase("analyzing");
@@ -150,11 +152,12 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
       const targets = typeof args.path === "string" ? [args.path] : [...files.keys()];
       const out: string[] = [];
       for (const path of targets) {
-        const text = files.get(path);
-        if (text === undefined) return `Error: no file at ${path}. Call listFiles.`;
-        text.split("\n").forEach((line, i) => {
-          if (out.length < GREP_MAX_MATCHES && re.test(line)) out.push(`${path}:${i + 1}: ${line.slice(0, GREP_LINE_CHARS)}`);
-        });
+        const file = files.get(path);
+        if (file === undefined) return `Error: no file at ${path}. Call listFiles.`;
+        for (let i = 0; i < file.lines.length && out.length < GREP_MAX_MATCHES; i++) {
+          if (re.test(file.lines[i])) out.push(`${path}:${i + 1}: ${file.lines[i].slice(0, GREP_LINE_CHARS)}`);
+        }
+        if (out.length >= GREP_MAX_MATCHES) break;
       }
       return out.length ? out.join("\n") : "No matches.";
     },
@@ -162,9 +165,8 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
     read: async (args) => {
       emit.phase("analyzing");
       const path = String(args.path ?? "");
-      const text = files.get(path);
-      if (text === undefined) return `Error: no file at ${path}. Call listFiles.`;
-      const lines = text.split("\n");
+      const lines = files.get(path)?.lines;
+      if (lines === undefined) return `Error: no file at ${path}. Call listFiles.`;
       const offset = Math.max(1, Number(args.offset) || 1);
       const limit = Math.min(READ_LINES, Math.max(1, Number(args.limit) || READ_LINES));
       const slice = lines.slice(offset - 1, offset - 1 + limit).join("\n").slice(0, READ_MAX_CHARS);
@@ -175,7 +177,7 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
     write: async (args) => {
       emit.phase("writing");
       const path = String(args.path ?? "");
-      files.set(path, String(args.content ?? ""));
+      store(path, String(args.content ?? ""));
       emit.log(`wrote ${path} (${String(args.content ?? "").length}b)`);
       return `Wrote ${path}.`;
     },
@@ -212,7 +214,7 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
   ];
 
   const deliverable = () =>
-    files.get(OUTPUT_PATH) ?? [...files].find(([path]) => /\.(tsx|jsx)$/.test(path))?.[1];
+    (files.get(OUTPUT_PATH) ?? [...files].find(([path]) => /\.(tsx|jsx)$/.test(path))?.[1])?.text;
 
   let lastText = "";
   let nudges = 0;

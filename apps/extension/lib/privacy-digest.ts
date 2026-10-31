@@ -25,7 +25,7 @@ export interface FilteredItem {
  * Keeps each request inside the on-device model's context window (4,096
  * tokens, shared with the instructions and the answer).
  */
-export const CHUNK_CHARS = 6000;
+const CHUNK_CHARS = 6000;
 /**
  * Later chunks of a very long page are dropped; the agent learns only that they
  * were. Each chunk is one on-device model call of 10 to 30 seconds, run one at

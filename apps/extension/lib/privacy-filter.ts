@@ -3,6 +3,7 @@ import { getFiltered, putFiltered, type FilteredCache } from "./page-cache";
 import { chunk, cleanItems, MAX_CHUNKS, redact, renderFiltered, toDigest, type FilteredItem } from "./privacy-digest";
 import { extensionStore, KEYS } from "./storage";
 import { HAS_ON_DEVICE_MODEL } from "./platform";
+import { withTimeout } from "./timeout";
 
 type ScrapeReport = Awaited<ReturnType<BrowserBridge["getPageHtml"]>>;
 
@@ -23,14 +24,12 @@ const SUMMARIZE_TIMEOUT_MS = 120_000;
 
 // Safari routes native messages to the extension's own app; the id is ignored.
 // A request that never answers would hang the build, so each one has a limit.
-const ask = (message: { kind: string; [field: string]: unknown }, timeoutMs: number) => {
-  let timer: ReturnType<typeof setTimeout>;
-  const timeout = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => reject(new Error(`the on-device model did not answer within ${timeoutMs / 1000} seconds`)), timeoutMs);
-  });
-  const request = browser.runtime.sendNativeMessage("application.id", message) as Promise<NativeReply>;
-  return Promise.race([request, timeout]).finally(() => clearTimeout(timer));
-};
+const ask = (message: { kind: string; [field: string]: unknown }, timeoutMs: number) =>
+  withTimeout(
+    browser.runtime.sendNativeMessage("application.id", message) as Promise<NativeReply>,
+    timeoutMs,
+    `the on-device model did not answer within ${timeoutMs / 1000} seconds`,
+  );
 
 /** Why the filter can't run here, or null when it can. */
 export async function filterUnavailableReason(): Promise<string | null> {

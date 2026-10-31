@@ -1,4 +1,4 @@
-import { EXPORT_FORMAT, type ImportedVisit } from "./history-import";
+import { EXPORT_FORMAT, isWebUrl, type ImportedVisit } from "./history-import";
 import { isScraperTab } from "./scraper";
 import { extensionStore, KEYS } from "./storage";
 import { HAS_HISTORY_API, USES_VISIT_LOG } from "./platform";
@@ -23,7 +23,9 @@ interface VisitLog {
 
 export const DAY_MS = 24 * 60 * 60 * 1000;
 /** Kept for longer than the widest history window the agent asks for. */
-const RETENTION_MS = 30 * DAY_MS;
+/** How long the visit log keeps a page. The import panel names this number too. */
+export const RETENTION_DAYS = 30;
+const RETENTION_MS = RETENTION_DAYS * DAY_MS;
 const MAX_URLS = 5000;
 /** Page loads arrive in bursts; write the log once they settle. */
 const SAVE_DELAY_MS = 1000;
@@ -54,7 +56,6 @@ function prune(log: VisitLog) {
   log.visits = Object.fromEntries(entries);
 }
 
-const isWebUrl = (url?: string): url is string => !!url && /^https?:\/\//.test(url);
 
 /** Count one visit to `url`. */
 async function recordVisit(url: string | undefined, title?: string) {

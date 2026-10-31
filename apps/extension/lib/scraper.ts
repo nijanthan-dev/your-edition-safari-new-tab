@@ -1,6 +1,7 @@
 import { isPrivateAddress, type BrowserBridge, type ScrapedPage } from "@homepage/agent-core";
 import sanitizeHtml from "sanitize-html";
 import { HAS_WEB_REQUEST } from "./platform";
+import { TimeoutError, withTimeout } from "./timeout";
 
 type ScrapeReport = Awaited<ReturnType<BrowserBridge["getPageHtml"]>>;
 
@@ -42,7 +43,8 @@ if (HAS_WEB_REQUEST) {
     (details) => {
       apiAddress = details.ip;
     },
-    { urls: ["https://api.anthropic.com/*"], tabId: -1 },
+    // tabId -1: the extension's own requests, so the model API of either provider.
+    { urls: ["https://*/*"], tabId: -1 },
   );
 }
 
@@ -121,17 +123,6 @@ async function createScraperWindow(): Promise<number> {
 /** A plain read of the DOM, used when the scrolling extraction doesn't finish. */
 const SNAPSHOT_TIMEOUT_MS = 5000;
 
-class TimeoutError extends Error {}
-
-/** Reject if `promise` hasn't settled within `ms`. */
-function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise<T> {
-  let timeoutId: ReturnType<typeof setTimeout>;
-  const timeout = new Promise<never>((_, reject) => {
-    timeoutId = setTimeout(() => reject(new TimeoutError(`${label} timed out after ${ms}ms`)), ms);
-  });
-  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
-}
-
 async function scrapeUrl(
   url: string,
   windowId: number,
@@ -175,7 +166,7 @@ async function scrapeUrl(
             files: ["/content-scripts/scraper.js"],
           }),
           opts.extractTimeout,
-          `Extracting ${url}`
+          `Extracting ${url} timed out after ${opts.extractTimeout}ms`
         );
 
         if (
@@ -216,7 +207,7 @@ async function scrapeUrl(
           func: () => ({ url: location.href, title: document.title, html: document.body?.innerHTML ?? "" }),
         }),
         SNAPSHOT_TIMEOUT_MS,
-        `Snapshotting ${url}`
+        `Snapshotting ${url} timed out after ${SNAPSHOT_TIMEOUT_MS}ms`
       )
         .then((injection) => {
           const snapshot = injection?.[0]?.result as ScraperResult | undefined;

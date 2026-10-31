@@ -1,8 +1,9 @@
 import { useState } from "react";
 import { readHistoryFile } from "@/lib/history-import";
 import type { VisitLogRequest } from "@/lib/protocol";
-import { btn, btnSecondary } from "./ui";
+import { btn, btnSecondary, helpText } from "./ui";
 import { USES_VISIT_LOG } from "@/lib/platform";
+import { RETENTION_DAYS } from "@/lib/visit-log";
 
 type Reply<T> = { ok: true; result: T } | { ok: false; error: string };
 
@@ -12,7 +13,7 @@ const ask = async <T,>(msg: VisitLogRequest): Promise<T> => {
   return reply.result;
 };
 
-const help = { color: "#888", fontSize: 12, lineHeight: 1.5, margin: "6px 0 0" } as const;
+const help = { ...helpText, lineHeight: 1.5 };
 
 /**
  * Safari only: import Safari's own history export so the agent has more than
@@ -34,8 +35,8 @@ export function ImproveTabPanel() {
       const { imported, total } = await ask<{ imported: number; total: number }>({ kind: "importVisits", visits });
       setStatus(
         imported
-          ? `Imported ${imported} pages from the last 30 days. The log now has ${total} pages. Rebuild to use them.`
-          : "The file has no pages from the last 30 days, so nothing was imported.",
+          ? `Imported ${imported} pages from the last ${RETENTION_DAYS} days. The log now has ${total} pages. Rebuild to use them.`
+          : `The file has no pages from the last ${RETENTION_DAYS} days, so nothing was imported.`,
       );
     } catch (error) {
       setStatus(`Import failed: ${error instanceof Error ? error.message : String(error)}`);
@@ -91,7 +92,7 @@ export function ImproveTabPanel() {
       {status && <p style={{ ...help, color: "#333" }}>{status}</p>}
       <p style={help}>
         Your Edition reads only History.json, never passwords or other files in the export. It
-        keeps the last 30 days on this Mac.
+        keeps the last {RETENTION_DAYS} days on this Mac.
       </p>
     </div>
   );

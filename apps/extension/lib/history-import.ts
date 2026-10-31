@@ -20,6 +20,9 @@ export interface ImportedVisit {
   visitCount: number;
 }
 
+/** Only http(s) pages count as visits: no file:, data: or browser pages. */
+export const isWebUrl = (url?: string | null): url is string => !!url && /^https?:\/\//i.test(url);
+
 export const EXPORT_FORMAT = "your-edition-visit-log";
 
 /** Only this file is ever decompressed from a ZIP. A Safari export can also hold passwords and cards. */
@@ -60,7 +63,7 @@ function findEntries(data: unknown): Record<string, unknown>[] | null {
 
 function toVisit(entry: Record<string, unknown>): ImportedVisit | null {
   const url = typeof entry.url === "string" ? entry.url : null;
-  if (!url || !/^https?:\/\//i.test(url)) return null;
+  if (!isWebUrl(url)) return null;
   const time =
     typeof entry.time_usec === "number" ? entry.time_usec / 1000
     : typeof entry.lastVisitTime === "number" ? entry.lastVisitTime

@@ -57,9 +57,8 @@ export interface ProviderConfig {
   chatModel: string;
 }
 
-/** A build in flight: which provider started it, and how often it was restarted. */
+/** A build in flight, and how often the browser stopped it and it started again. */
 export interface ActiveBuild {
-  provider: Provider;
   attempts: number;
 }
 
@@ -74,12 +73,7 @@ export interface Settings extends ProviderConfig {
 
 export type Provider = "anthropic" | "chat";
 
-/** Anthropic keys start with this; the setup screen and Settings both check it. */
-export const isAnthropicKey = (key: string) => key.startsWith("sk-ant-");
-
-/** Whether the chosen provider has a key, so a build can start. */
-export const hasProviderKey = (s: Pick<Settings, "provider" | "apiKey" | "chatApiKey">) =>
-  Boolean(s.provider === "chat" ? s.chatApiKey : s.apiKey);
+export { hasProviderKey, providerKeyProblem } from "./provider-key";
 
 /** The `KVStore` agent-core persists its agent/environment/session IDs through. */
 export const extensionStore: KVStore = {
@@ -98,7 +92,7 @@ export const extensionStore: KVStore = {
 /** Keys from before `providerConfig`, read once so an upgrade keeps the user's keys. */
 const LEGACY_PROVIDER_KEYS = ["provider", "apiKey", "chatApiKey", "chatBaseUrl", "chatModel"] as const;
 
-function toProviderConfig(raw: Partial<Record<keyof ProviderConfig, unknown>>): ProviderConfig {
+export function toProviderConfig(raw: Partial<Record<keyof ProviderConfig, unknown>>): ProviderConfig {
   return {
     provider: raw.provider === "chat" ? "chat" : "anthropic",
     apiKey: (raw.apiKey as string | undefined) || null,

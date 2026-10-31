@@ -6,19 +6,10 @@ import type { KVStore } from "./types";
 /** The Anthropic path always uses this model; Settings offers no choice. */
 export const DEFAULT_MODEL = "claude-sonnet-5-5";
 
-export type HomepageModel = typeof DEFAULT_MODEL;
-
-/**
- * An agent is pinned to its model, so each model gets its own cached agent.
- * Switching back and forth reuses them instead of provisioning a new one per switch.
- */
-export function agentIdKey(model: HomepageModel): string {
-  return `agentId-${model.replace(/^claude-/, "")}`;
-}
+/** Where the cached agent ID is stored. The name keeps the agent that earlier versions made. */
+const AGENT_ID_KEY = "agentId-sonnet-5-5";
 
 export const STORAGE_KEYS = {
-  apiKey: "apiKey",
-  agentVersion: "agentVersion",
   environmentId: "environmentId",
   activeSessionId: "activeSessionId",
   uploadedFileIds: "uploadedFileIds",
@@ -71,10 +62,10 @@ export async function ensureEnvironment(
  * metadata; when the code changes (e.g. after pulling an update), the agent is
  * updated in place instead of silently running the old definition.
  */
-function agentDefinition(model: HomepageModel) {
+function agentDefinition() {
   return {
     name: AGENT_NAME,
-    model,
+    model: DEFAULT_MODEL,
     description: "Builds a personalized homepage from the user's browsing history.",
     system: HOMEPAGE_SYSTEM_PROMPT,
     tools: [
@@ -121,14 +112,10 @@ async function fingerprint(definition: object): Promise<string> {
   return [...new Uint8Array(digest).slice(0, 8)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
-export async function ensureAgent(
-  client: Anthropic,
-  store: KVStore,
-  model: HomepageModel = DEFAULT_MODEL,
-): Promise<string> {
-  const definition = agentDefinition(model);
+export async function ensureAgent(client: Anthropic, store: KVStore): Promise<string> {
+  const definition = agentDefinition();
   const metadata = { config: await fingerprint(definition) };
-  const key = agentIdKey(model);
+  const key = AGENT_ID_KEY;
   const cached = await store.get<string>(key);
   const existing = cached
     ? await client.beta.agents.retrieve(cached).catch(() => null)
@@ -146,6 +133,5 @@ export async function ensureAgent(
   const agent = await client.beta.agents.create({ ...definition, metadata });
 
   await store.set(key, agent.id);
-  await store.set(STORAGE_KEYS.agentVersion, agent.version);
   return agent.id;
 }

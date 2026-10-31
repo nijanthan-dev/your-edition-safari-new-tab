@@ -179,7 +179,7 @@ export interface KickoffInput {
   userSystemPrompt?: string;
 }
 
-export function getTimeOfDay(date: Date): "morning" | "afternoon" | "evening" | "night" {
+function getTimeOfDay(date: Date): "morning" | "afternoon" | "evening" | "night" {
   const hour = date.getHours();
   if (hour >= 5 && hour < 12) return "morning";
   if (hour >= 12 && hour < 17) return "afternoon";

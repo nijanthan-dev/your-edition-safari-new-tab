@@ -17,3 +17,12 @@ export const HAS_ON_DEVICE_MODEL = import.meta.env.BROWSER === "safari";
 
 /** Safari's webRequest can be missing. Then the private-address check uses host names only. */
 export const HAS_WEB_REQUEST = typeof browser.webRequest?.onResponseStarted?.addListener === "function";
+
+/** The browser this build runs in, for messages that name it. */
+export const BROWSER_NAME = import.meta.env.BROWSER === "safari" ? "Safari" : "Chrome";
+
+/** Where the user grants the extension website access in this browser. */
+export const WEBSITE_ACCESS_HELP =
+  import.meta.env.BROWSER === "safari"
+    ? "In Safari, open Settings > Extensions > Your Edition and click Always Allow on Every Website."
+    : "In Chrome, open chrome://extensions, click Details under Your Edition, and allow access on all sites.";

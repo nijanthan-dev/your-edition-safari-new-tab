@@ -1,11 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { DEFAULT_MODEL, discardSession, runHomepageBuild, runHomepageBuildChat, type RunPhase } from "@homepage/agent-core";
+import { discardSession, runHomepageBuild, runHomepageBuildChat, type RunPhase } from "@homepage/agent-core";
 import { shouldAutoRebuild } from "./auto-rebuild";
 import { browserBridge } from "./browser-bridge";
 import { explainBuildError } from "./host-access";
 import {
   INITIAL_BUILD_STATE,
   LOG_RETENTION,
+  reduce,
   stepForPhase,
   type BuildMsg,
   type BuildState,
@@ -21,6 +22,7 @@ import {
   type ActiveBuild,
   type Settings,
 } from "./storage";
+import { BROWSER_NAME } from "./platform";
 
 type Port = Parameters<Parameters<typeof browser.runtime.onConnect.addListener>[0]>[0];
 
@@ -30,7 +32,7 @@ type Port = Parameters<Parameters<typeof browser.runtime.onConnect.addListener>[
  * net that reattaches after an unexpected kill.
  */
 const KEEPALIVE_INTERVAL_MS = 20_000;
-/** Times a build that Safari stopped is resumed or started again, before it gives up. */
+/** Times a build that the browser stopped is resumed or started again, before it gives up. */
 const MAX_RESTARTS = 3;
 
 /** Storage snapshots are throttled so narration deltas don't flood chrome.storage. */
@@ -109,7 +111,7 @@ export class BuildManager {
       return;
     }
 
-    // A build this worker did not see end: Safari (or the browser) stopped it.
+    // A build this worker did not see end: the browser stopped the worker.
     // An Anthropic session resumes from its event log; any other build starts
     // again, and the page and filter caches make it continue where it stopped.
     const [settings, sessionId, interrupted] = await Promise.all([
@@ -121,8 +123,10 @@ export class BuildManager {
     if (interrupted || resumable) {
       const attempts = interrupted?.attempts ?? 0;
       if (attempts >= MAX_RESTARTS) {
+        // Give up on the session too, or the next tick would resume it with a new count.
+        if (resumable) await this.discardAnthropicSession(resumable, settings.apiKey);
         await extensionStore.remove(KEYS.activeBuild);
-        const message = "Safari stopped the build several times. Keep a Your Edition tab open, then try again.";
+        const message = `${BROWSER_NAME} stopped the build several times. Keep a Your Edition tab open, then try again.`;
         this.state = { ...INITIAL_BUILD_STATE, phase: "error", error: message };
         this.broadcast({ kind: "error", message });
         await this.mirror(true);
@@ -132,13 +136,12 @@ export class BuildManager {
       return;
     }
 
-    await this.maybeAutoRebuild();
+    await this.maybeAutoRebuild(settings);
   }
 
   /** Whether opening the day's first tab should already show a fresh homepage. */
-  private async maybeAutoRebuild() {
-    const [settings, homepage, lastAttempt] = await Promise.all([
-      loadSettings(),
+  private async maybeAutoRebuild(settings: Settings) {
+    const [homepage, lastAttempt] = await Promise.all([
       loadHomepage(),
       extensionStore.get<string>(KEYS.lastAutoBuildAttempt),
     ]);
@@ -236,9 +239,9 @@ export class BuildManager {
       // A resume request (an old tab's button) only applies to Anthropic; with
       // another provider, the old session is deleted first.
       const leftover = await this.dropStaleSession(settings, storedSession);
-      const record: ActiveBuild = { provider: settings.provider, attempts: opts.attempt ?? 0 };
+      const record: ActiveBuild = { attempts: opts.attempt ?? 0 };
       await extensionStore.set(KEYS.activeBuild, record);
-      if (opts.attempt) this.onLog(`Safari stopped the build; continuing (attempt ${opts.attempt} of ${MAX_RESTARTS})`);
+      if (opts.attempt) this.onLog(`${BROWSER_NAME} stopped the build; continuing (attempt ${opts.attempt} of ${MAX_RESTARTS})`);
 
       // The key is the user's own, read from local storage — there is no server
       // to hide it behind. See ARCHITECTURE.md → Privacy.
@@ -261,8 +264,6 @@ export class BuildManager {
               store: extensionStore,
               userSystemPrompt: systemPrompt,
               blockedSites,
-              // Anthropic always uses the default Claude model; there is no model choice.
-              model: DEFAULT_MODEL,
               resumeSessionId: opts.resume ? leftover : undefined,
               signal: this.controller.signal,
               callbacks,
@@ -276,9 +277,15 @@ export class BuildManager {
       await this.mirror(true);
       console.log("[BuildManager] build done", { bytes: result.code.length, source: result.source });
     } catch (error) {
-      // A cancel for a provider change is not a failure: the restart below takes over.
-      if (this.restartPending) {
-        console.log("[BuildManager] build cancelled for a restart");
+      // A cancel is not a failure. For a provider change, the restart below takes
+      // over. For the user's Cancel, the tabs go back to where they were.
+      if (this.controller?.signal.aborted) {
+        console.log("[BuildManager] build cancelled", { restart: this.restartPending });
+        if (!this.restartPending) {
+          this.state = { ...INITIAL_BUILD_STATE };
+          this.broadcast({ kind: "snapshot", state: this.state });
+          await this.mirror(true);
+        }
         return;
       }
       const message = await explainBuildError(error);
@@ -319,25 +326,23 @@ export class BuildManager {
 
   // ---- callback fan-out ----------------------------------------------------
 
-  private onPhase(phase: RunPhase, detail?: string) {
-    const mapped = stepForPhase(phase);
-    const stepIndex =
-      mapped === undefined ? this.state.stepIndex : Math.max(this.state.stepIndex, mapped);
-    this.state = { ...this.state, phase, stepIndex, detail: detail ?? "" };
-    this.broadcast({ kind: "phase", phase, stepIndex, detail: detail ?? "" });
+  /** Apply a progress message to the worker's state with the tabs' reducer, then send it. */
+  private progress(msg: BuildMsg) {
+    this.state = reduce(this.state, msg);
+    this.broadcast(msg);
     void this.mirror(false);
+  }
+
+  private onPhase(phase: RunPhase, detail?: string) {
+    this.progress({ kind: "phase", phase, stepIndex: stepForPhase(phase) ?? this.state.stepIndex, detail: detail ?? "" });
   }
 
   private onText(chunk: string) {
-    this.state = { ...this.state, narration: this.state.narration + chunk };
-    this.broadcast({ kind: "text", chunk });
-    void this.mirror(false);
+    this.progress({ kind: "text", chunk });
   }
 
   private onLog(line: string) {
-    this.state = { ...this.state, logs: [...this.state.logs.slice(-LOG_RETENTION), line] };
-    this.broadcast({ kind: "log", line });
-    void this.mirror(false);
+    this.progress({ kind: "log", line });
   }
 
   // ---- storage mirror ------------------------------------------------------

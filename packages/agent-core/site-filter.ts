@@ -39,7 +39,7 @@ export function normalizeBlockList(lines: string[]): string[] {
 }
 
 /** Loopback, private and link-local addresses, and names only a local network resolves. */
-export function isPrivateHost(host: string): boolean {
+function isPrivateHost(host: string): boolean {
   if (host.startsWith("[")) {
     const v6 = host.slice(1, -1);
     // URL serializes IPv4-mapped addresses as hex, e.g. [::ffff:7f00:1].

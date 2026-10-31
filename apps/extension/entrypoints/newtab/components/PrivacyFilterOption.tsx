@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { filterUnavailableReason, PRIVACY_FILTER_SUPPORTED } from "@/lib/privacy-filter";
-import { helpText } from "./ui";
+import { checkRow, helpText } from "./ui";
 
 /**
  * The on-device privacy filter switch and its status (Safari only). Shown in
@@ -22,9 +22,7 @@ export function PrivacyFilterOption({
   if (!PRIVACY_FILTER_SUPPORTED) return null;
   return (
     <>
-      <label
-        style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, color: "#333", fontSize: 14, cursor: "pointer" }}
-      >
+      <label style={checkRow}>
         <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
         On-device privacy filter
       </label>

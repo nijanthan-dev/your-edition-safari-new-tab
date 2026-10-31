@@ -1,5 +1,6 @@
 import { APIConnectionError } from "@anthropic-ai/sdk";
 import { ChatConnectionError } from "@homepage/agent-core";
+import { WEBSITE_ACCESS_HELP } from "./platform";
 
 /**
  * Website access. The worker needs it to reach api.anthropic.com and to read
@@ -30,5 +31,5 @@ export async function explainBuildError(error: unknown): Promise<string> {
   return granted
     ? `Your Edition can't reach ${host}. Check your internet connection, then try again.`
     : `Your Edition can't reach ${host}, because it has no website access. ` +
-        "In Safari, open Settings > Extensions > Your Edition and click Always Allow on Every Website. Then try again.";
+        `${WEBSITE_ACCESS_HELP} Then try again.`;
 }

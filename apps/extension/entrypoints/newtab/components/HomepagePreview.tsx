@@ -1,3 +1,4 @@
+import { memo, useMemo } from "react";
 import { SandpackLayout, SandpackPreview, SandpackProvider } from "@codesandbox/sandpack-react";
 
 const INDEX_JS = `import React from "react";
@@ -15,12 +16,16 @@ const INDEX_HTML = `<!DOCTYPE html>
  * Renders the agent's component in a Sandpack iframe. The code is
  * model-generated, so it runs sandboxed rather than in the extension's own page.
  */
-export function HomepagePreview({ code }: { code: string }) {
-  const files = {
-    "/App.js": { code },
-    "/index.js": { code: INDEX_JS },
-    "/index.html": { code: INDEX_HTML },
-  };
+export const HomepagePreview = memo(function HomepagePreview({ code }: { code: string }) {
+  // The page re-renders on every build message; give Sandpack new files only for new code.
+  const files = useMemo(
+    () => ({
+      "/App.js": { code },
+      "/index.js": { code: INDEX_JS },
+      "/index.html": { code: INDEX_HTML },
+    }),
+    [code],
+  );
 
   return (
     <SandpackProvider files={files} template="react" options={{ autorun: true }}>
@@ -29,4 +34,4 @@ export function HomepagePreview({ code }: { code: string }) {
       </SandpackLayout>
     </SandpackProvider>
   );
-}
+});

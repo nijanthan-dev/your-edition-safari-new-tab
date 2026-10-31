@@ -3,7 +3,7 @@ import { normalizeBlockList } from "@homepage/agent-core";
 import { ImproveTabPanel } from "./ImproveTabPanel";
 import { PrivacyFilterOption } from "./PrivacyFilterOption";
 import { ProviderOption } from "./ProviderOption";
-import { btn, btnSecondary, helpText } from "./ui";
+import { btn, btnSecondary, checkRow, helpText } from "./ui";
 
 export function SettingsModal({
   initialPrompt,
@@ -70,17 +70,7 @@ export function SettingsModal({
           One per line. Subdomains are included. Use *.example.com for wildcards.
         </p>
         <ProviderOption />
-        <label
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: 8,
-            marginTop: 16,
-            color: "#333",
-            fontSize: 14,
-            cursor: "pointer",
-          }}
-        >
+        <label style={checkRow}>
           <input
             type="checkbox"
             checked={autoRebuild}

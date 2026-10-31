@@ -31,6 +31,7 @@ function groupByDomain(
   days: number,
 ): RawSiteMetadata[] {
   const byDomain = new Map<string, RawSiteMetadata>();
+  const titlesByDomain = new Map<string, Set<string>>();
 
   for (const item of items) {
     if (!item.url) continue;
@@ -58,11 +59,15 @@ function groupByDomain(
       byDomain.set(domain, site);
     }
 
+    // Both sources give one item per URL (chrome.history, and the visit log keyed
+    // by URL), so every item is a new page. Titles repeat, so a set skips those.
     site.totalVisits += item.visitCount || 1;
-    if (!site.urls.includes(item.url)) {
-      site.urls.push(item.url);
-      site.uniquePages++;
-      if (item.title && !site.titles.includes(item.title)) site.titles.push(item.title);
+    site.urls.push(item.url);
+    site.uniquePages++;
+    const seen = titlesByDomain.get(domain) ?? titlesByDomain.set(domain, new Set()).get(domain)!;
+    if (item.title && !seen.has(item.title)) {
+      seen.add(item.title);
+      site.titles.push(item.title);
     }
     if (item.lastVisitTime && item.lastVisitTime > site.lastVisitTime) {
       site.lastVisitTime = item.lastVisitTime;

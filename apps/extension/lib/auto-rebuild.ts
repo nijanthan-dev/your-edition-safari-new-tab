@@ -5,8 +5,8 @@
  */
 
 /** Local hours (inclusive start, exclusive end) when the morning edition may build. */
-export const MORNING_START_HOUR = 5;
-export const MORNING_END_HOUR = 12;
+const MORNING_START_HOUR = 5;
+const MORNING_END_HOUR = 12;
 
 export interface AutoRebuildInput {
   enabled: boolean;

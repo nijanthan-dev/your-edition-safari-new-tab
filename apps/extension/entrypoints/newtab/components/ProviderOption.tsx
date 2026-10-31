@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { BHARATCODE } from "@homepage/agent-core";
-import { isAnthropicKey, loadSettings, saveProviderConfig, type Provider, type ProviderConfig } from "@/lib/storage";
+import { loadSettings, providerKeyProblem, saveProviderConfig, toProviderConfig, type Provider, type ProviderConfig } from "@/lib/storage";
 import { btn, field, helpText as help } from "./ui";
 
 /** BharatCode's models. Used on the setup screen and in Settings. */
@@ -36,7 +36,7 @@ export function ProviderOption() {
 
   useEffect(() => {
     void loadSettings().then((s) => {
-      const config = pickConfig(s);
+      const config = toProviderConfig(s);
       setSaved(config);
       setDraft(config);
     });
@@ -46,10 +46,7 @@ export function ProviderOption() {
   const set = (patch: Partial<ProviderConfig>) => setDraft({ ...draft, ...patch });
   const isPreset = draft.chatBaseUrl === BHARATCODE.baseUrl;
   const changed = JSON.stringify(draft) !== JSON.stringify(saved);
-  const problem =
-    draft.provider === "anthropic"
-      ? draft.apiKey && isAnthropicKey(draft.apiKey) ? null : "Enter an Anthropic API key (sk-ant-...)."
-      : draft.chatApiKey ? null : "Enter an API key for this provider.";
+  const problem = providerKeyProblem(draft);
 
   const save = async () => {
     const next = { ...draft, chatBaseUrl: draft.chatBaseUrl.trim() || BHARATCODE.baseUrl, chatModel: draft.chatModel.trim() };
@@ -114,7 +111,7 @@ export function ProviderOption() {
         <button style={{ ...btn, opacity: changed && !problem ? 1 : 0.5 }} disabled={!changed || Boolean(problem)} onClick={() => void save()}>
           Save provider
         </button>
-        <span style={{ color: "#888", fontSize: 12 }}>{changed ? problem ?? "Not saved yet." : "Saved."}</span>
+        <span style={{ ...help, margin: 0 }}>{changed ? problem ?? "Not saved yet." : "Saved."}</span>
       </div>
       <p style={help}>
         Saving a new provider or key during a build restarts the build with the new settings.
@@ -123,11 +120,3 @@ export function ProviderOption() {
     </div>
   );
 }
-
-const pickConfig = ({ provider, apiKey, chatApiKey, chatBaseUrl, chatModel }: ProviderConfig): ProviderConfig => ({
-  provider,
-  apiKey,
-  chatApiKey,
-  chatBaseUrl,
-  chatModel,
-});

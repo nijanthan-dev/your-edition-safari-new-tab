@@ -3,7 +3,7 @@ import { buildHistoryDigest, slugifyUrl } from "./history-digest";
 import { OUTPUT_PATH, buildKickoffMessage } from "./prompt";
 import { DEFAULT_BLOCKED_SITES, isAllowedUrl, isBlocked, isPrivateAddress, normalizeBlockList } from "./site-filter";
 import { DEFAULTS } from "./schemas";
-import { STORAGE_KEYS, ensureAgent, ensureEnvironment, type HomepageModel } from "./setup";
+import { STORAGE_KEYS, ensureAgent, ensureEnvironment } from "./setup";
 import type {
   BrowserBridge,
   GetHistoryResult,
@@ -44,8 +44,6 @@ export interface RunOptions {
    * so a list saved mid-build applies to the rest of that build.
    */
   blockedSites?: string[] | (() => Promise<string[]>);
-  /** Ignored when resuming: the session keeps the agent (and model) it started with. */
-  model?: HomepageModel;
   callbacks?: RunCallbacks;
   signal?: AbortSignal;
   /** Reattach to an existing session instead of creating one (e.g. after the host was killed mid-run). */
@@ -59,7 +57,7 @@ export async function runHomepageBuild(opts: RunOptions): Promise<HomepageBuildR
 
   emit.phase("setup");
   const [agentId, environmentId] = await Promise.all([
-    ensureAgent(client, store, opts.model),
+    ensureAgent(client, store),
     ensureEnvironment(client, store),
   ]);
   emit.log(`agent=${agentId} environment=${environmentId}`);
@@ -87,16 +85,16 @@ export async function runHomepageBuild(opts: RunOptions): Promise<HomepageBuildR
 
   let finalMessage = "";
 
-  /**
-   * Every path out of here must send a result. An `agent.custom_tool_use` that
-   * never receives one leaves the session idle forever — the single
-   * unrecoverable bug in this design.
-   */
   // Results computed but not yet delivered, by tool-use id. A send that fails
   // (the connection dropped mid-build) is retried on reconnect with the same
   // result, instead of scraping the pages again.
   const undelivered = new Map<string, { is_error?: true; text: string }>();
 
+  /**
+   * Every path out of here must send a result. An `agent.custom_tool_use` that
+   * never receives one leaves the session idle forever — the single
+   * unrecoverable bug in this design.
+   */
   const runTool = async (event: CustomToolUse): Promise<{ is_error?: true; text: string }> => {
     try {
       const blockedSites = await resolveBlockedSites(opts.blockedSites);

@@ -34,6 +34,33 @@ export const INITIAL_BUILD_STATE: BuildState = {
 /** How many recent log lines are kept (and shown). */
 export const LOG_RETENTION = 40;
 
+/**
+ * Apply one worker → page message to a build state. The worker keeps its own
+ * state with it, and each tab keeps its mirror with it, so both stay the same.
+ */
+export function reduce(state: BuildState, msg: BuildMsg): BuildState {
+  switch (msg.kind) {
+    case "snapshot":
+      return msg.state;
+    case "phase":
+      return {
+        ...state,
+        running: true,
+        phase: msg.phase,
+        stepIndex: Math.max(state.stepIndex, msg.stepIndex),
+        detail: msg.detail,
+      };
+    case "text":
+      return { ...state, narration: state.narration + msg.chunk };
+    case "log":
+      return { ...state, logs: [...state.logs.slice(-LOG_RETENTION), msg.line] };
+    case "done":
+      return { ...state, running: false, phase: "done" };
+    case "error":
+      return { ...state, running: false, phase: "error", error: msg.message };
+  }
+}
+
 // page → worker
 export type PageMsg =
   | { kind: "subscribe" } //                    → replies with a snapshot

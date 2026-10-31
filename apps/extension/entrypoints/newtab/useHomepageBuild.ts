@@ -4,7 +4,7 @@ import {
   AGENT_PORT,
   INITIAL_BUILD_STATE,
   PING_INTERVAL_MS,
-  LOG_RETENTION,
+  reduce,
   type BuildMsg,
   type BuildState,
   type PageMsg,
@@ -13,30 +13,6 @@ import {
 import { KEYS, extensionStore } from "@/lib/storage";
 
 type Port = ReturnType<typeof browser.runtime.connect>;
-
-/** Reduce a worker → page message into the local mirror of the build state. */
-function reduce(state: BuildState, msg: BuildMsg): BuildState {
-  switch (msg.kind) {
-    case "snapshot":
-      return msg.state;
-    case "phase":
-      return {
-        ...state,
-        running: true,
-        phase: msg.phase,
-        stepIndex: Math.max(state.stepIndex, msg.stepIndex),
-        detail: msg.detail,
-      };
-    case "text":
-      return { ...state, narration: state.narration + msg.chunk };
-    case "log":
-      return { ...state, logs: [...state.logs.slice(-LOG_RETENTION), msg.line] };
-    case "done":
-      return { ...state, running: false, phase: "done" };
-    case "error":
-      return { ...state, running: false, phase: "error", error: msg.message };
-  }
-}
 
 /**
  * Thin client onto the worker-hosted build. Connects the port, subscribes for a

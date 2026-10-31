@@ -71,7 +71,8 @@ export interface ScrapedPage {
 
 /**
  * The two capabilities only a real browser has. Everything else the agent needs
- * (a filesystem, grep, read) is supplied by the session sandbox.
+ * (a filesystem, grep, read) comes from the host: the session sandbox for
+ * Anthropic, or the chat loop's in-memory files.
  */
 export interface BrowserBridge {
   getHistory(args: {

@@ -5,7 +5,7 @@ import type { ScrapedPage } from "@homepage/agent-core";
  * a retry after a failure) reuses them instead of opening the same tabs again.
  * The pages are already sanitized; they stay in local storage only, and the
  * privacy filter still runs on them when it is on. Pure, so it is tested
- * directly (harness/page-cache.test.ts).
+ * directly (harness/history-import.test.ts).
  */
 export interface PageCache {
   [url: string]: { page: ScrapedPage; at: number };

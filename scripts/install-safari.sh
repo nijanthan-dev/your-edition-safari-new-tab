@@ -56,14 +56,14 @@ else
 fi
 BUILT="$BUILD_DIR/Build/Products/Release/$APP_NAME.app"
 
-# One version for the manifest, the app and the extension: the latest release
-# tag (vX.Y.Z), or package.json when it is higher. Each install gets a new build number, so
-# macOS never sees two different apps with the same version and build.
-git -C "$ROOT" fetch --tags --quiet 2>/dev/null || true
-# The release workflow passes the version it is about to tag. Otherwise use
-# the higher of the latest tag and package.json (a manual minor/major bump wins).
+# One version for the manifest, the app and the extension. The release workflow
+# passes the version it is about to tag. Otherwise use the higher of the latest
+# tag (vX.Y.Z) and package.json, so a manual minor/major bump wins. Each install
+# gets a new build number, so macOS never sees two different apps with the same
+# version and build.
 VERSION="${YOUR_EDITION_VERSION:-}"
 if [ -z "$VERSION" ]; then
+  git -C "$ROOT" fetch --tags --quiet 2>/dev/null || true
   VERSION=$( (git -C "$ROOT" tag --list 'v[0-9]*.[0-9]*.[0-9]*' | sed 's/^v//'
     node -p "require('$ROOT/apps/extension/package.json').version") | sort -V | tail -1)
 fi

@@ -59,6 +59,11 @@ wall clock waiting on the model. Three things keep it alive or bring it back:
 
 ### Tabs are views
 
+The worker and every tab apply each progress message with the same `reduce()`
+(`lib/protocol.ts`), so a late tab's snapshot and the live deltas always agree.
+A Cancel is not a failure. The worker sends an empty snapshot, and the tabs go
+back to the homepage or the first-build screen.
+
 Each new tab connects on a port (`lib/protocol.ts`), receives a snapshot of the
 build state, then streams phase/text/log deltas. Every open tab shows the same live
 run. A throttled snapshot is also mirrored to storage so a tab opened while the
@@ -99,11 +104,15 @@ apps/extension/           MV3 extension (WXT + React)
     scraper.ts            getPageHtml: load URLs in a background window, sanitize HTML
     privacy-filter.ts     Safari: send pages to the app's on-device model via native messaging
     privacy-digest.ts     pure half: page → [n]-numbered text, model items → HTML, redaction
-    protocol.ts           page ↔ worker messages, the five UI build steps, the Safari ping
+    protocol.ts           page ↔ worker messages, the five UI build steps, the Safari ping, and
+                          reduce(): the one state reducer that the worker and the tabs share
     host-access.ts        ask for website access on Build; readable connection errors
     auto-rebuild.ts       when to rebuild on a schedule
     storage.ts            every chrome.storage key, settings (providerConfig), saved homepage
-    platform.ts           what this browser can do: history API, visit log, on-device model, webRequest
+    platform.ts           what this browser can do (history API, visit log, on-device model,
+                          webRequest), and its name and website-access help for messages
+    provider-key.ts       the key rule for both providers (no browser APIs, so the harness tests it)
+    timeout.ts            withTimeout: one time limit helper for the scraper and native messages
     transpile.ts          TSX → JS for the preview
 
 scripts/install-safari.sh build the app in a temp folder, install one copy in ~/Applications
@@ -111,8 +120,8 @@ scripts/install-safari.sh build the app in a temp folder, install one copy in ~/
                           With YOUR_EDITION_OUTPUT=<dir> it only builds, signs and notarizes:
                           the release workflow's mac-app job runs it that way.
 
-.github/workflows/release.yml  version → mac-app (macOS runner, secrets in the "release"
-                          environment; skipped without them) → release (bundles + GitHub release)
+.github/workflows/release.yml  version → signing (are there secrets?) → mac-app (macOS runner,
+                          only with secrets) and bundles (Ubuntu), at the same time → release
 
 apps/safari/Your Edition/  Xcode project: the Mac app that carries the extension
   Your Edition Extension/
@@ -225,8 +234,8 @@ private-IP and local-network hosts are always blocked, whatever the list says.
 A name can still resolve to a private address (`fritz.box`, an intranet name). So
 the scraper also records the address each page was served from (`webRequest`,
 observe only), and drops the page before upload when that address is private.
-That address is only reported when the extension's own API requests connect to a
-public address. Behind a proxy at a private address, or when the browser reports
+That address is only reported when the extension's own requests to the model API
+(Anthropic or the chat provider) connect to a public address. Behind a proxy at a private address, or when the browser reports
 no address, the name check is all there is. History digests still list such a
 domain. Subresource loads are not intercepted.
 
