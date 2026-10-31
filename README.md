@@ -1,6 +1,6 @@
 # Your Edition: a private AI front page for every Safari new tab
 
-**Start here:** download `Your-Edition-<version>-mac.zip` from the [latest release](https://github.com/nijanthan-dev/your-edition-safari-new-tab/releases/latest), then do [the 4 Safari steps](#2-turn-it-on-in-safari-about-3-minutes). Setup takes about 5 minutes.
+**Start here:** run the 3 commands in [Build the app](#1-build-the-app-about-10-minutes), then do [the Safari steps](#2-turn-it-on-in-safari-about-5-minutes). Setup takes about 15 minutes.
 
 Your Edition replaces the Safari new tab page. An AI agent reads the sites you visit and writes a front page for you each morning. You read it in every new tab, all day.
 
@@ -38,23 +38,10 @@ You need:
 - A Mac with macOS 27 or later
 - An API key from [Anthropic](https://console.anthropic.com) or [BharatCode](https://bharatcode.ai)
 
-### 1. Get the app (about 2 minutes)
+> [!NOTE]
+> **There is no ready-to-download Mac app yet.** For now, you build the app on your Mac with the commands below. A notarized download needs a paid Apple signing setup, so I will add it when people ask for it. If you want one, [star the repo](https://github.com/nijanthan-dev/your-edition-safari-new-tab) or [open an issue](https://github.com/nijanthan-dev/your-edition-safari-new-tab/issues).
 
-1. Open the [latest release](https://github.com/nijanthan-dev/your-edition-safari-new-tab/releases/latest).
-2. Download `Your-Edition-<version>-mac.zip`.
-3. Open the zip. Move **Your Edition.app** to your **Applications** folder.
-4. Open **Your Edition** one time. Then you can close it.
-
-Apple notarized the app, so macOS opens it without a warning. If a release has no Mac app, [build it yourself](#build-it-yourself-about-10-minutes).
-
-### 2. Turn it on in Safari (about 3 minutes)
-
-1. Open **Safari → Settings → Extensions**. Select **Your Edition**.
-2. Click **Always Allow on Every Website…**. Your Edition needs this access to reach your AI provider and to read the pages that it summarizes.
-3. Open **Settings → General**. Set **New tabs open with** to **Your Edition**.
-4. Open a new tab.
-
-### Build it yourself (about 10 minutes)
+### 1. Build the app (about 10 minutes)
 
 You also need Xcode 27 or later and [Node.js](https://nodejs.org) 20 or later. Run these 3 commands:
 
@@ -64,16 +51,23 @@ cd your-edition-safari-new-tab
 npx pnpm@10.11.1 install && npx pnpm@10.11.1 install:safari
 ```
 
-1. The last command builds the app, installs it in `~/Applications/Your Edition.app` and opens it. You do not need to open Xcode.
-2. If Safari is open, the command asks you to quit Safari first. Safari 27 can crash if the command replaces the app while Safari is open.
-3. A build that you make yourself is not notarized. So in Safari, open **Settings → Advanced** and select **Show features for web developers**. Then open **Develop → Developer Settings…** and select **Allow unsigned extensions**.
-4. Do [the Safari steps](#2-turn-it-on-in-safari-about-3-minutes).
+- The last command builds the app, installs it in `~/Applications/Your Edition.app` and opens it. You do not need to open Xcode.
+- If Safari is open, the command asks you to quit Safari first. Safari 27 can crash if the command replaces the app while Safari is open.
+- The script keeps exactly one copy of the app. macOS registers every app that Xcode builds, and Safari shows one **Your Edition** for each copy that it finds. So the script builds in a temporary folder, copies the app to `~/Applications`, then deletes the build copy. It also deletes an old `Morning Tab.app`, the name of this project before version 0.2.
 
-> Safari clears **Allow unsigned extensions** each time Safari quits. After a restart, do step 3 again. A notarized app from a release does not need this setting.
+### 2. Turn it on in Safari (about 5 minutes)
 
-The install script keeps exactly one copy of the app. macOS registers every app that Xcode builds, and Safari shows one **Your Edition** for each copy that it finds. So the script builds in a temporary folder, copies the app to `~/Applications`, then deletes the build copy. It also deletes an old `Morning Tab.app`, the name of this project before version 0.2.
+1. Open **Safari → Settings → Advanced**. Select **Show features for web developers**.
+2. Open **Develop → Developer Settings…**. Select **Allow unsigned extensions**. Your build is not notarized, so Safari needs this setting.
+3. Open **Settings → Extensions**. Select **Your Edition**.
+4. Click **Always Allow on Every Website…**. Your Edition needs this access to reach your AI provider and to read the pages that it summarizes.
+5. Open **Settings → General**. Set **New tabs open with** to **Your Edition**.
+6. Open a new tab.
 
-To sign and notarize your own builds, see [Sign your own builds](#sign-your-own-builds-optional).
+> [!WARNING]
+> Safari clears **Allow unsigned extensions** each time Safari quits. After each restart, do step 2 again, or **Your Edition** disappears from the extension list.
+
+To sign and notarize your own builds with your own Apple Developer ID, see [Sign your own builds](#sign-your-own-builds-optional). Then Safari does not need **Allow unsigned extensions**.
 
 ### Upgrade from Morning Tab
 
@@ -89,7 +83,7 @@ Morning Tab is the name of this project before version 0.2. After the upgrade, S
 
 | Problem | Cause | Fix |
 | --- | --- | --- |
-| **Your Edition** is not in the extension list | The app was not opened one time. Or, for your own build, **Allow unsigned extensions** is off. | Open **Your Edition.app**. For your own build, select **Allow unsigned extensions** again. |
+| **Your Edition** is not in the extension list | **Allow unsigned extensions** is off. Safari turns it off each time Safari quits. | Open **Develop → Developer Settings…** and select **Allow unsigned extensions** again. Then open **Your Edition.app** one time. |
 | **Your Edition** shows 2 or more times | macOS has more than one copy of the app, for example from **Run** in Xcode | Delete every copy except the one in Applications. To find them, run the command below. |
 | "Connection error." or "has no website access" | Safari has not given Your Edition website access | Click **Build today's edition** and allow access in the prompt. Or open **Settings → Extensions → Your Edition** and click **Always Allow on Every Website…**. |
 | The privacy filter status says "not available" | Apple Intelligence is off or still downloading | See [The on-device privacy filter](#the-on-device-privacy-filter-optional). |
@@ -186,7 +180,7 @@ Your Edition can use 2 kinds of provider. Select one in **⚙️ Settings → Mo
 | What the agent ranks | Your real Chrome history (14 days by default) | Your Edition's own visit log (up to 30 days) |
 | First edition | Full, from day one | Thin. It gets better over the first few days. |
 | Notification when a background build fails | Yes | No. The error shows in your next new tab. |
-| Install | Load the folder in `chrome://extensions` | Open the notarized app from a release, or build it in Xcode |
+| Install | Load the folder in `chrome://extensions` | Build a Mac app with Xcode. The app contains the extension. |
 | On-device privacy filter | Not available | Optional. Uses Apple Intelligence on your Mac. |
 
 ### Why Your Edition cannot read your Safari history
@@ -272,7 +266,7 @@ To rebuild now, click **↻ Rebuild** at the top right.
 - **Cost.** With Anthropic, your key pays for each build. The cost depends on the quantity of text that the agent reads. BharatCode charges a flat monthly fee instead. To build only when you ask, turn off automatic rebuilds.
 - **What the agent reads.** The agent ranks the sites you visit and opens up to 8 of them in each build. It skips search engines, webmail, banking and logged-out marketing pages.
 - **Links are real.** Each link on your page comes from a page that the agent read. The agent has an instruction to never invent a URL.
-- **Updates.** Download the new release and replace the app. If you build it yourself, pull the new code and run `npx pnpm@10.11.1 install:safari`.
+- **Updates.** Pull the new code with `git pull`, then run `npx pnpm@10.11.1 install:safari`.
 
 ## How it works
 
@@ -329,9 +323,8 @@ Git ignores `signing.local.env`, so your certificate details stay on your Mac. T
 Each push to `main` makes a new release automatically. The workflow is [`release.yml`](.github/workflows/release.yml).
 
 1. It tags the next patch version, for example `v0.2.0`, then `v0.2.1`.
-2. On a GitHub macOS runner, it builds the app, signs it and has Apple notarize it.
-3. It builds the Safari and Chrome bundles.
-4. It publishes a [GitHub release](https://github.com/nijanthan-dev/your-edition-safari-new-tab/releases) with the Mac app, the 2 bundles and a `SHA256SUMS.txt` file.
+2. It builds the Safari and Chrome bundles.
+3. It publishes a [GitHub release](https://github.com/nijanthan-dev/your-edition-safari-new-tab/releases) with the 2 bundles and a `SHA256SUMS.txt` file.
 
 GitHub gives public repositories free minutes on its runners, so a release costs nothing.
 
@@ -341,7 +334,8 @@ GitHub gives public repositories free minutes on its runners, so a release costs
 | Push without a release | Change only Markdown files or `docs/`. These pushes do not release. |
 | Release again without a change | Run the **Release** workflow by hand on the **Actions** tab. |
 
-The maintainer signs and notarizes the Mac app with their own Developer ID. The certificate and the notary key are GitHub encrypted secrets. Nobody else can read them from the repository, the logs or the release, and workflows from fork pull requests do not get them.
+> [!NOTE]
+> The workflow can also build, sign and notarize the Mac app on a GitHub macOS runner. That step runs only when the maintainer adds signing secrets, which is not done yet (see [the note in Install](#install)). The secrets would be GitHub encrypted secrets. Nobody else could read them from the repository, the logs or the release, and workflows from fork pull requests never get them.
 
 ## Status
 
