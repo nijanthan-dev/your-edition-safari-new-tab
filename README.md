@@ -10,7 +10,7 @@ npx pnpm@10.11.1 install && npx pnpm@10.11.1 install:safari
 
 Morning Tab replaces the Safari new tab page. An AI agent reads the sites you visit and writes a new homepage for you each morning.
 
-**Privacy option:** turn on the [on-device privacy filter](#the-on-device-privacy-filter-optional). Apple Intelligence then reads each page on your Mac, and only short summaries go to Anthropic.
+**Privacy option:** turn on the [on-device privacy filter](#the-on-device-privacy-filter-optional). Apple Intelligence then reads each page on your Mac, and only short summaries go to your model provider.
 
 ![An example homepage in a morning-newspaper style](docs/preview.png)
 <sub>Illustration of the default look. The agent builds your homepage from your own browsing, so your stories will be different.</sub>
@@ -35,7 +35,7 @@ You need:
 2. The last command builds the app, installs it in `~/Applications/Morning Tab.app` and opens it. You do not need to open Xcode.
 3. If Safari is open, the command asks you to quit Safari first. Safari 27 can crash if the command replaces the app while Safari is open.
 
-The app, its extension and the extension manifest all use one version: the latest release tag, for example `0.1.3`. Each install also gets a new build number (the date and time), so macOS and Safari never see two different builds with the same number.
+The app, its extension and the extension manifest all use one version: the latest release tag, for example `0.1.9`. Each install also gets a new build number (the date and time), so macOS and Safari never see two different builds with the same number.
 
 The install script keeps exactly one copy of the app. macOS registers every app that Xcode builds, and Safari shows one **Morning Tab** for each copy that it finds. So the script builds in a temporary folder, copies the app to `~/Applications`, then deletes the build copy.
 
@@ -62,7 +62,7 @@ The password stays in your keychain. The script uses only the profile name.
 
 1. Open **Safari → Settings → Advanced**. Select **Show features for web developers**.
 2. Open **Develop → Developer Settings…**. Select **Allow unsigned extensions**. If you signed and notarized the app (see above), skip this step.
-3. Open **Settings → Extensions**. Enable **Morning Tab**. Click **Always Allow on Every Website…**. Morning Tab needs this access to reach the Anthropic API and to read your pages.
+3. Open **Settings → Extensions**. Enable **Morning Tab**. Click **Always Allow on Every Website…**. Morning Tab needs this access to reach your model provider and to read your pages.
 4. Open **Settings → General**. Set **New tabs open with** to **Morning Tab**.
 
 > Safari clears **Allow unsigned extensions** each time Safari quits. After a restart, do step 2 again. A signed and notarized app does not need this setting.
@@ -74,7 +74,7 @@ The password stays in your keychain. The script uses only the profile name.
 | **Morning Tab** is not in the extension list | **Allow unsigned extensions** is off. Safari turns it off each time Safari quits or crashes. | Open **Develop → Developer Settings…** and select **Allow unsigned extensions** again. If it is still missing, quit Safari (⌘Q), open it, and do that step again. |
 | Safari crashes during an install | Safari 27 crashes when it loads a replaced extension and adds its toolbar button again. This is a bug in Safari. | Quit Safari before you run `install:safari`. The command now asks you to do this. |
 | **Morning Tab** shows 2 or more times | macOS has more than one copy of the app, for example from **Run** in Xcode | Run `npx pnpm@10.11.1 install:safari`. Then delete any other copy of `Morning Tab.app`. |
-| "Connection error." or "has no website access" | Safari has not given Morning Tab website access. Morning Tab needs it to reach the Anthropic API and to read pages. | Click **Build today's homepage** and allow access in the prompt. Or open **Settings → Extensions → Morning Tab** and click **Always Allow on Every Website…**. |
+| "Connection error." or "has no website access" | Safari has not given Morning Tab website access. Morning Tab needs it to reach your model provider and to read pages. | Click **Build today's homepage** and allow access in the prompt. Or open **Settings → Extensions → Morning Tab** and click **Always Allow on Every Website…**. |
 | The privacy filter status says "not available" | Apple Intelligence is off or still downloading | See [The on-device privacy filter](#the-on-device-privacy-filter-optional). |
 
 To find every copy that macOS knows about, run this command:
@@ -114,8 +114,8 @@ The privacy filter is the main difference from the original extension. It is off
 
 | | Filter off (default) | Filter on |
 | --- | --- | --- |
-| What goes to Anthropic for each page | The cleaned HTML of the page | A list of items: a title, one sentence and the page's own link for each |
-| Who reads the full page | Anthropic's model | Apple Intelligence, on your Mac |
+| What goes to the model provider for each page | The cleaned HTML of the page | A list of items: a title, one sentence and the page's own link for each |
+| Who reads the full page | The provider's model | Apple Intelligence, on your Mac |
 | Personal details | The agent has an instruction to skip them | The on-device model leaves them out. Then a pattern check replaces emails, phone numbers and long numbers, such as card numbers, with a placeholder. |
 | Page titles in the history summary | Sent as they are | Sent after the same pattern check |
 | If Apple Intelligence is not ready | Not needed | The page is not sent. The build continues with the other data. |
@@ -229,7 +229,7 @@ Click **⚙️ Settings** on the new tab. It is also on the first-build screen, 
 
 | You write | You get |
 | --- | --- |
-| *"A morning newspaper. Serif type, a big masthead, a lead story, a column of briefs."* | A newspaper front page |
+| *"A dark magazine look. Huge headlines, short captions, one wide column."* | A magazine look |
 | *"One calm column. No images. Five things worth reading, with one line on why."* | A short reading list |
 | *"Dense dashboard: GitHub PRs and issues first, then Hacker News, then everything else."* | A work dashboard |
 | *"Green-on-black terminal, monospace, like a 1980s BBS."* | A terminal look |
@@ -260,7 +260,7 @@ Click **Save & rebuild** to use them now.
 - It builds the first time Safari is open between 5 AM and noon. If Safari is not open that morning, it skips that day.
 - It starts only after your first manual build. It tries one time each morning at most.
 
-**5. On-device privacy filter.** This setting is off by default. When it is on, Apple Intelligence on your Mac summarizes each page first, and only the summaries go to Anthropic. See [The on-device privacy filter](#the-on-device-privacy-filter-optional).
+**5. On-device privacy filter.** This setting is off by default. When it is on, Apple Intelligence on your Mac summarizes each page first, and only the summaries go to your model provider. See [The on-device privacy filter](#the-on-device-privacy-filter-optional).
 
 To rebuild now, click **↻ Rebuild** at the top right.
 
@@ -269,7 +269,7 @@ To rebuild now, click **↻ Rebuild** at the top right.
 - **Cost.** Your API key pays for each build. The cost depends on the provider and on the quantity of text the agent reads. BharatCode charges a flat monthly fee instead. To build only when you ask, disable automatic rebuilds.
 - **What the agent reads.** The agent ranks the sites you visit and opens up to 8 of them in each build. It skips search engines, webmail, banking and logged-out marketing pages. If it cannot open a page, it reports the failure.
 - **Links are real.** Each link on your page comes from a page that the agent read. The agent has an instruction to never invent a URL.
-- **Interrupted builds.** If Safari closes during a build, the next new tab shows **Resume interrupted build**.
+- **Interrupted builds.** If Safari closes during an Anthropic build, the next new tab shows **Resume interrupted build**. A BharatCode build cannot resume. Click **Build today's homepage** again.
 - **Updates.** After you pull new code, run `npx pnpm@10.11.1 install:safari`.
 
 ## How it works
@@ -281,7 +281,12 @@ With Anthropic, these steps run in a Claude Managed Agents session. With BharatC
 3. **`grep` / `read`**: the agent finds headlines, posts and links in those files.
 4. **`write`**: the agent writes one React component. The new tab shows it.
 
-The extension's background worker controls a [Claude Managed Agents](https://docs.claude.com) session directly. There is no server between them. The two custom tools run in the extension, because they need the visit log and Safari's tabs. All other work runs in the agent's sandbox. The sandbox has no shell access, because scraped pages are untrusted input.
+There is no Morning Tab server. The extension's background worker talks to the provider directly. The two custom tools (`getHistory` and `getPageHtml`) always run in the extension, because they need the visit log and Safari's tabs.
+
+- **Anthropic:** the file tools run in the [Claude Managed Agents](https://docs.claude.com) sandbox. The sandbox has no shell access, because scraped pages are untrusted input.
+- **BharatCode:** the extension keeps the pages in memory and answers the file tools itself.
+
+The default look comes from a house style that Morning Tab adds to each build request. Your **Instructions** replace it.
 
 For the event flow, the layout and known issues, read **[ARCHITECTURE.md](./ARCHITECTURE.md)**.
 
@@ -299,6 +304,7 @@ pnpm build:safari        # Safari bundle for the Xcode project
 pnpm install:safari      # build the app and install one copy in ~/Applications
 pnpm typecheck           # all packages
 pnpm test                # unit tests (no API calls, needs Bun)
+pnpm extension:test      # the built extension in headless Chrome
 
 cp .env.example .env     # add ANTHROPIC_API_KEY, then:
 pnpm agent:run           # a full build with the real API and test history
@@ -321,7 +327,7 @@ Each push to `main` makes a new release automatically. The workflow is [`release
 | Push without a release | Change only Markdown files or `docs/`. These pushes do not release. |
 | Release again without a change | Run the **Release** workflow by hand on the **Actions** tab. |
 
-The release does not contain the Mac app. To use the Safari bundle, build the app in Xcode (see [Install](#install)).
+The release does not contain the Mac app. To get the app, run `install:safari` (see [Install](#install)).
 
 ## Status
 

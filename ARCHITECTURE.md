@@ -1,6 +1,8 @@
 # Architecture
 
-There is no server. Three parties are involved, and you run one of them.
+There is no server. The extension talks to one model provider that you choose: Anthropic
+(Claude Managed Agents, described first) or an OpenAI-compatible chat API such as BharatCode
+(see [Model providers](#privacy) under Privacy).
 
 | | Runs where | Does what |
 |---|---|---|
@@ -8,11 +10,13 @@ There is no server. Three parties are involved, and you run one of them.
 | **Extension** (new-tab page(s)) | Your browser | Thin view: subscribes to the worker over a port, renders live progress and the finished homepage |
 | **Orchestration layer** | Anthropic | Runs the agent loop, persists the session event log, emits `agent.custom_tool_use` |
 | **Session sandbox** | Anthropic | Runs `read` / `grep` / `glob` / `write` over the mounted pages |
+| **Chat API** (BharatCode path) | The provider | Only the model. The worker runs the loop and answers every tool, file tools included, from memory |
+| **Morning Tab app** (Safari) | Your Mac | Carries the extension. Runs the on-device privacy filter over native messaging |
 
 The agent loop runs **in the service worker** (`apps/extension/lib/build-manager.ts`), so a build
 survives closing the tab, shows up in every open tab, and can run headless on a
 `chrome.alarms` schedule. The two custom tools execute in the extension too, because they
-need `chrome.history` and `chrome.tabs`. Anthropic never executes them — it emits an event
+need history (`chrome.history` on Chrome, the visit log on Safari) and `chrome.tabs`. Anthropic never executes them — it emits an event
 and waits for a `user.custom_tool_result` on the same authenticated stream. There is no
 inbound connection and no public endpoint.
 
@@ -49,6 +53,9 @@ wall clock waiting on the model. Three things keep it alive or bring it back:
   the session's event log, re-answers any tool call left hanging, and finishes.
 - **The same heartbeat** drives scheduled rebuilds (`lib/auto-rebuild.ts`), so the
   first new tab of the day already shows a fresh homepage.
+- **In Safari**, open tabs also ping the worker every 10s during a build, and a
+  stopped BharatCode build restarts (see [Privacy](#privacy), "Keeping the worker
+  alive in Safari").
 
 ### Tabs are views
 
@@ -70,8 +77,9 @@ packages/agent-core/      host-agnostic agent loop — imports no chrome.*, brow
   chat-loop.ts            runHomepageBuildChat: the same agent over an OpenAI-compatible API (BharatCode),
                           with listFiles / grep / read / write answered from memory
   setup.ts                ensureAgent / ensureEnvironment (created once, cached by ID)
-  prompt.ts               system prompt + per-build kickoff message
+  prompt.ts               system prompt + per-build kickoff message (with HOUSE_STYLE, the default look)
   schemas.ts              custom tool input schemas and defaults
+  site-filter.ts          blocked-sites list and the private-address check
   history-digest.ts       narrows raw history to fit a tool result
   types.ts                BrowserBridge, KVStore, RunPhase, …
 
@@ -79,7 +87,8 @@ apps/extension/           MV3 extension (WXT + React)
   entrypoints/
     background.ts         service worker: hosts BuildManager, alarm heartbeat
     scraper.content.ts    injected into scraped tabs: scroll, return HTML
-    newtab/               the new-tab UI (thin client onto the worker)
+    newtab/               the new-tab UI (thin client onto the worker): setup, Settings,
+                          provider choice, privacy filter, Improve this tab
   lib/
     build-manager.ts      single-flight build host, broadcast, keepalive, reattach
     browser-bridge.ts     BrowserBridge over chrome.history / chrome.tabs (+ the privacy filter when on)
@@ -90,7 +99,8 @@ apps/extension/           MV3 extension (WXT + React)
     scraper.ts            getPageHtml: load URLs in a background window, sanitize HTML
     privacy-filter.ts     Safari: send pages to the app's on-device model via native messaging
     privacy-digest.ts     pure half: page → [n]-numbered text, model items → HTML, redaction
-    protocol.ts           page ↔ worker messages and the five UI build steps
+    protocol.ts           page ↔ worker messages, the five UI build steps, the Safari ping
+    host-access.ts        ask for website access on Build; readable connection errors
     auto-rebuild.ts       when to rebuild on a schedule
     storage.ts            every chrome.storage key, settings, saved homepage
     transpile.ts          TSX → JS for the preview
@@ -110,7 +120,7 @@ harness/                  Bun scripts: drive agent-core with a fixture/fetch bri
 
 | Command | Proves |
 |---|---|
-| `pnpm test` | The history digest is capped, ranked, drops `urls[]`, reports `totalSitesSeen` |
+| `pnpm test` | 56 unit tests: history digest, blocked sites, auto-rebuild, stream reconnect, the chat loop, the privacy digest, history import, the page caches, the prompt and the house style, session discard |
 | `pnpm agent:run` | Full build against the real API: tools, mounting, sandbox grep/read, deliverable, cleanup |
 | `pnpm agent:verify` | The deliverable transforms, evaluates and server-renders |
 | `pnpm agent:resume-test` | A build killed with a tool call pending can be reattached and finished |
@@ -151,6 +161,15 @@ arrived in the history fetch.
 **`event_start` / `event_delta` stream events carry no `id`.** Skip them before dedupe.
 
 **`files.upload()` takes no `purpose`.** Just `{ file }`.
+
+## The default look
+
+`HOUSE_STYLE` (`packages/agent-core/prompt.ts`) describes a broadsheet front page, the
+look of `docs/preview.png`: Mac system fonts only (Bodoni 72 / Didot headlines, Iowan
+Old Style text), cream paper, a masthead, a dateline and three columns. It goes in the
+kickoff message, after the user's standing instructions, not in the system prompt. So
+both providers get it, the user's instructions can replace it, and the Managed Agents
+agent is not re-versioned. No web fonts are loaded, so a new tab makes no font request.
 
 ## Privacy
 
@@ -235,6 +254,6 @@ until deleted, and uploaded files persist independently. `runHomepageBuild` dele
 both in a `finally`. Confirm retention/ZDR eligibility against current docs before
 distributing this.
 
-The API key lives in `chrome.storage.local`, readable by anyone with access to the
-browser profile. Fine for a tool you run yourself; **do not ship this to the Web Store**
-without moving the key behind a proxy.
+The API keys live in `chrome.storage.local`, readable by anyone with access to the
+browser profile. Fine for a tool you run yourself; **do not ship this to the Chrome Web
+Store or the Mac App Store** without moving the key behind a proxy.

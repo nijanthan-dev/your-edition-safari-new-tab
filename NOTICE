@@ -7,4 +7,7 @@ is kept in LICENSE.
 
 Changes in this fork: Safari Web Extension support (a local visit log in place
 of the history API, Safari-specific manifest permissions, guards for APIs
-Safari lacks), the Xcode project in apps/safari, and the new name.
+Safari lacks), the Xcode project in apps/safari, an install script, an optional
+on-device privacy filter (Apple Foundation Models), import and export of
+browsing history, an OpenAI-compatible provider option (BharatCode), a default
+broadsheet house style, and the new name.
