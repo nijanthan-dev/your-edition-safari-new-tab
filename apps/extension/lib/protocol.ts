@@ -100,7 +100,7 @@ export const BUILD_STEPS: { label: string; phases: RunPhase[] }[] = [
   { label: "Reading your history", phases: ["history"] },
   { label: "Opening pages in your browser", phases: ["scraping"] },
   { label: "Analyzing pages", phases: ["analyzing"] },
-  { label: "Writing your homepage", phases: ["writing", "cleanup", "done"] },
+  { label: "Writing your edition", phases: ["writing", "cleanup", "done"] },
 ];
 
 /** Which step a phase belongs to, or `undefined` if it shouldn't move the stepper. */

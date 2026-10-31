@@ -65,7 +65,7 @@ export function BuildProgress({
             </button>
             {onBack && (
               <button className="build-cancel" style={{ background: "transparent" }} onClick={onBack}>
-                ← Back to homepage
+                ← Back to your edition
               </button>
             )}
           </div>

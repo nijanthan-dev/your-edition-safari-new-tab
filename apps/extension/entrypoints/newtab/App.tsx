@@ -235,7 +235,7 @@ export default function App() {
             ↻ Rebuild
           </button>
         )}
-        <button style={btn} onClick={() => setShowSettings(true)} title="Customize homepage">
+        <button style={btn} onClick={() => setShowSettings(true)} title="Customize your edition">
           ⚙️ Settings
         </button>
       </div>
