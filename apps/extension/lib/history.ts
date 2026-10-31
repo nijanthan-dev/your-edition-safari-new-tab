@@ -1,11 +1,14 @@
 import type { RawSiteMetadata } from "@homepage/agent-core";
+import { hasHistoryApi, searchVisits } from "./visit-log";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 /** Domains seen fewer times than this are noise, not interests. */
 const MIN_VISITS = 2;
+/** Until the visit log is this old, every domain in it counts (it starts from open tabs). */
+const YOUNG_LOG_DAYS = 3;
 
 /**
- * Read chrome.history, group it by domain, rank by relevance, and return
+ * Read chrome.history (or, on Safari, the extension's own visit log), group it by domain, rank by relevance, and return
  * all domains so agent-core can exclude blocked sites before counting and
  * narrowing for the context window in `buildHistoryDigest`.
  */
@@ -13,13 +16,21 @@ export async function getHistorySites(
   daysToAnalyze: number,
   _maxResults: number,
 ): Promise<{ sites: RawSiteMetadata[]; totalSitesSeen: number }> {
-  const items = await browser.history.search({
-    text: "",
-    startTime: Date.now() - daysToAnalyze * DAY_MS,
-    maxResults: 10_000,
-  });
+  const startTime = Date.now() - daysToAnalyze * DAY_MS;
+  let items: { url?: string; title?: string; lastVisitTime?: number; visitCount?: number }[];
+  let days = daysToAnalyze;
+  let minVisits = MIN_VISITS;
+  if (hasHistoryApi()) {
+    items = await browser.history.search({ text: "", startTime, maxResults: 10_000 });
+  } else {
+    const log = await searchVisits(startTime);
+    items = log.items;
+    // Average over the days actually logged, not the window asked for.
+    days = Math.min(daysToAnalyze, log.daysCovered);
+    if (log.daysCovered < YOUNG_LOG_DAYS) minVisits = 1;
+  }
 
-  const ranked = rank(groupByDomain(items, daysToAnalyze), daysToAnalyze);
+  const ranked = rank(groupByDomain(items, days), days, minVisits);
   return {
     sites: ranked,
     totalSitesSeen: ranked.length,
@@ -77,7 +88,7 @@ function groupByDomain(
  * Relevance = frequency (40%) + recency (30%) + page diversity (20%) +
  * consistency (10%), each normalized to 0–1.
  */
-function rank(sites: RawSiteMetadata[], days: number): RawSiteMetadata[] {
+function rank(sites: RawSiteMetadata[], days: number, minVisits: number): RawSiteMetadata[] {
   const now = Date.now();
   for (const site of sites) {
     const daysSinceLastVisit = (now - site.lastVisitTime) / DAY_MS;
@@ -88,6 +99,6 @@ function rank(sites: RawSiteMetadata[], days: number): RawSiteMetadata[] {
       Math.min(site.averageVisitsPerDay / 5, 1) * 0.1;
   }
   return sites
-    .filter((s) => s.totalVisits >= MIN_VISITS)
+    .filter((s) => s.totalVisits >= minVisits)
     .sort((a, b) => b.relevanceScore - a.relevanceScore);
 }

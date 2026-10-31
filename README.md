@@ -1,11 +1,17 @@
-# AI Homepage
+# Morning Tab: an AI new tab page for Safari
 
-**A new tab that reads the internet for you.**
+**A Safari new tab that reads the internet for you.**
 
-AI Homepage replaces Chrome's new-tab page with one that's written for you. An
-agent looks at what you've actually been browsing, opens the pages you follow
-(signed in as you), and writes a fresh homepage from what it finds there. It
-rebuilds itself in the background, so each new tab is up to date.
+Morning Tab replaces Safari's new-tab page with one that's written for you. An
+agent looks at what you've been browsing, opens the pages you follow (signed in
+as you), and writes a fresh homepage from what it finds there. It rebuilds itself
+each morning, so each new tab is up to date.
+
+> **Credit.** Morning Tab is a Safari port of
+> [**AI Homepage (ThariqS/ai-newtab)**](https://github.com/ThariqS/ai-newtab) by
+> [Thariq Shihipar](https://github.com/ThariqS). The agent, the new-tab UI and the
+> design are his work. This fork adds Safari support. It is not affiliated with or
+> endorsed by the original author, Apple or Anthropic. Licensed MIT, like the original.
 
 ![An example homepage in a morning-newspaper style](docs/preview.png)
 <sub>Illustration. Your homepage is built from your own browsing, so its stories will be different.</sub>
@@ -14,37 +20,67 @@ A morning newspaper is just one look. You can describe any look and the next bui
 follows it: a quiet one-column digest, a dense dashboard, a green-on-black
 terminal, a zine.
 
-> **Privacy, up front.** To build your homepage, the extension sends a summary of
-> your browsing history (top domains, visit counts, a few page titles) and the
-> cleaned-up HTML of up to 8 pages to the Anthropic API, using your own API key.
-> Those pages are loaded in your signed-in browser, so they can include private
-> content. The agent session and every uploaded page are deleted when each build
-> ends. Your API key stays in the extension's local storage. More detail in
-> [ARCHITECTURE.md](./ARCHITECTURE.md#privacy).
+> **Privacy, up front.** Nothing leaves your Mac except during a build, and then
+> only to the Anthropic API, using your own API key. A build sends a summary of
+> the sites you visit (top domains, visit counts, a few page titles) and the
+> cleaned-up HTML of up to 8 pages. Those pages are loaded in your signed-in
+> browser, so they can include private content. The agent session and every
+> uploaded page are deleted when each build ends. Your API key and the visit log
+> stay in the extension's local storage on your Mac. They are never synced. More
+> detail in [ARCHITECTURE.md](./ARCHITECTURE.md#privacy).
 
 ---
 
-## Install
+## How Safari is different
 
-You need Chrome (or another Chromium browser), [Node.js](https://nodejs.org) 20+,
-and an [Anthropic API key](https://console.anthropic.com).
+Safari gives extensions **no access to your browsing history**. So on Safari,
+Morning Tab keeps its own small log of the pages you load, starting the moment
+you install it ([`lib/visit-log.ts`](apps/extension/lib/visit-log.ts)):
+
+- On install, it starts the log from the tabs you have open.
+- After that, it counts each page you load. Private windows are never logged.
+- Pages that Morning Tab opens itself, to read for a build, are not counted.
+- Entries older than 30 days are deleted. The log never leaves your Mac except
+  as the summary sent during a build.
+
+Your first homepage is thin. It improves over the first few days as the log fills.
+
+Other differences: Safari has no extension notifications, so a failed background
+build shows only in the next new tab. Safari can bring the window that Morning
+Tab opens to read pages to the front.
+
+The Chrome build still works and still reads Chrome's history.
+
+## Install (Safari on macOS)
+
+You need macOS with Xcode, [Node.js](https://nodejs.org) 20+, and an
+[Anthropic API key](https://console.anthropic.com).
 
 ```bash
-git clone https://github.com/ThariqS/ai-newtab.git
-cd ai-newtab
+git clone https://github.com/nijanthan-dev/morning-tab-safari.git
+cd morning-tab-safari
 npx pnpm@10.11.1 install
+npx pnpm@10.11.1 build:safari
+```
+
+Then build and run the app that carries the extension:
+
+1. Open `apps/safari/Morning Tab/Morning Tab.xcodeproj` in Xcode.
+2. Choose the **Morning Tab** scheme and **My Mac**, then press **Run** (⌘R).
+3. In Safari, open **Settings → Advanced** and turn on **Show features for web developers**.
+4. Open **Develop → Developer Settings…** and turn on **Allow unsigned extensions**.
+   Safari turns this off each time it quits, so do it again after a restart.
+5. Open **Settings → Extensions**, turn on **Morning Tab**, and allow it on **All Websites**.
+6. Open **Settings → General** and set **New tabs open with** to **Morning Tab**.
+
+## Install (Chrome)
+
+```bash
 npx pnpm@10.11.1 build
 ```
 
-(If you already have [pnpm](https://pnpm.io), plain `pnpm install && pnpm build` works too.)
-
-Then load it into Chrome:
-
-1. Go to `chrome://extensions`.
-2. Turn on **Developer mode** (top right).
-3. Click **Load unpacked** and choose `apps/extension/.output/chrome-mv3`.
-
-If Chrome asks whether to keep the changed new-tab page, choose **Keep it**.
+Go to `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**
+and choose `apps/extension/.output/chrome-mv3`.
 
 ## Your first homepage
 
@@ -91,8 +127,8 @@ addresses (localhost, private IPs, `.local` and `.internal` hosts) are always bl
 The new model takes effect from your next build.
 
 **Rebuild automatically each morning.** On by default. The extension builds one
-morning edition a day, quietly in the background, the first time Chrome is open
-between 5am and noon. If Chrome isn't open that morning, the day is skipped. It
+morning edition a day, quietly in the background, the first time your browser is
+open between 5am and noon. If it isn't open that morning, the day is skipped. It
 only starts after you've built once by hand, and it tries at most once per
 morning, so it never loops.
 
@@ -108,10 +144,11 @@ morning, so it never loops.
   marketing pages. Anything it can't open is reported, not hidden.
 - **Links are real.** Every link on the page comes from a page the agent actually
   read. It's told never to invent a URL.
-- **Interrupted builds.** If Chrome closes mid-build, the new tab offers
+- **Interrupted builds.** If the browser closes mid-build, the new tab offers
   **Resume interrupted build** next time.
-- **Updating.** After pulling new code, run `npx pnpm@10.11.1 build` again, then
-  click the reload icon on the extension in `chrome://extensions`.
+- **Updating.** After pulling new code, run `npx pnpm@10.11.1 build:safari` again,
+  then press **Run** in Xcode. For Chrome, run `npx pnpm@10.11.1 build` and click
+  the reload icon on the extension in `chrome://extensions`.
 
 ## How it works
 
@@ -125,7 +162,7 @@ morning, so it never loops.
 The extension's background worker drives a
 [Claude Managed Agents](https://docs.claude.com) session directly, with no server
 in between. The two custom tools run in the extension because they need
-`chrome.history` and `chrome.tabs`. Everything else happens in the agent's
+the browser's history (or, on Safari, the local visit log) and tabs. Everything else happens in the agent's
 sandbox, where shell access is off: scraped pages are untrusted input.
 
 See **[ARCHITECTURE.md](./ARCHITECTURE.md)** for the event flow, the layout, and
@@ -136,6 +173,7 @@ the gotchas worth knowing.
 ```
 packages/agent-core   the agent loop: host-agnostic, no chrome.* or node:*
 apps/extension        the MV3 extension (WXT + React)
+apps/safari           the Xcode project that packages the extension for Safari
 harness               Bun scripts that run agent-core outside Chrome, and test the built extension
 ```
 
@@ -156,6 +194,10 @@ Early and experimental. It's a tool you run yourself with your own key. Don't
 publish it to a store as-is: anyone with access to the browser profile can read
 the stored API key.
 
-## License
+## Credits and license
 
-MIT
+Morning Tab is built on [AI Homepage](https://github.com/ThariqS/ai-newtab) by
+[Thariq Shihipar](https://github.com/ThariqS). Thank you, Thariq, for building it
+and releasing it under MIT.
+
+MIT. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE).

@@ -1,5 +1,7 @@
 import { BuildManager } from "@/lib/build-manager";
 import { AGENT_PORT } from "@/lib/protocol";
+import { isScraperTab } from "@/lib/scraper";
+import { hasHistoryApi, startVisitLog } from "@/lib/visit-log";
 
 /**
  * The service worker is the build host. It owns the agent loop (BuildManager),
@@ -15,6 +17,9 @@ const HEARTBEAT_ALARM = "homepage-heartbeat";
 
 export default defineBackground(() => {
   const manager = new BuildManager();
+
+  // Safari has no history API: log page loads locally instead (see lib/visit-log.ts).
+  if (!hasHistoryApi()) startVisitLog(isScraperTab);
 
   browser.runtime.onConnect.addListener((port) => {
     if (port.name === AGENT_PORT) manager.attach(port);

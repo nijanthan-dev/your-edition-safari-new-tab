@@ -1,0 +1,10 @@
+Morning Tab
+https://github.com/nijanthan-dev/morning-tab-safari
+
+Morning Tab is a Safari port of AI Homepage (https://github.com/ThariqS/ai-newtab)
+by Thariq Shihipar, used under the MIT License. The original copyright notice
+is kept in LICENSE.
+
+Changes in this fork: Safari Web Extension support (a local visit log in place
+of the history API, Safari-specific manifest permissions, guards for APIs
+Safari lacks), the Xcode project in apps/safari, and the new name.

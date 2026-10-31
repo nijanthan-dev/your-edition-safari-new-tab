@@ -34,7 +34,8 @@ const DEFAULT_OPTIONS: Required<ScrapeOptions> = {
  * says nothing about the page's host and is not reported.
  */
 let apiAddress: string | undefined;
-browser.webRequest.onResponseStarted.addListener(
+// Safari's webRequest may be missing or report no address; then no address is reported.
+browser.webRequest?.onResponseStarted.addListener(
   (details) => {
     apiAddress = details.ip;
   },
@@ -95,6 +96,11 @@ function cleanHtmlForLLM(html: string) {
   });
 }
 
+/** Windows the scraper has open, so their tabs aren't logged as your visits. */
+const scraperWindows = new Set<number>();
+export const isScraperTab = (tab: { windowId?: number }) =>
+  tab.windowId !== undefined && scraperWindows.has(tab.windowId);
+
 /** Scrape in a separate unfocused window so tabs don't flash in front of the user. */
 async function createScraperWindow(): Promise<number> {
   const win = await browser.windows.create({
@@ -104,6 +110,7 @@ async function createScraperWindow(): Promise<number> {
     height: 800,
   });
   if (win?.id === undefined) throw new Error("Could not open the scraper window");
+  scraperWindows.add(win.id);
   return win.id;
 }
 
@@ -264,7 +271,7 @@ export async function scrapeUrls(
     addresses.set(details.tabId, details.ip);
   };
   const direct = apiAddress !== undefined && !isPrivateAddress(apiAddress);
-  if (direct) {
+  if (direct && browser.webRequest) {
     browser.webRequest.onResponseStarted.addListener(recordAddress, {
       urls: ["http://*/*", "https://*/*"],
       types: ["main_frame"],
@@ -291,10 +298,11 @@ export async function scrapeUrls(
       else failed.push({ url, reason: "failed to load or extract within timeout" });
     });
   } finally {
-    browser.webRequest.onResponseStarted.removeListener(recordAddress);
+    browser.webRequest?.onResponseStarted.removeListener(recordAddress);
     // Close the scraper window
     try {
       await browser.windows.remove(windowId);
+      scraperWindows.delete(windowId);
     } catch (error) {
       console.error("Failed to close scraper window:", error);
     }

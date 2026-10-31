@@ -4,6 +4,7 @@
   "packageManager": "pnpm@10.11.1",
   "scripts": {
     "build": "pnpm --filter @homepage/extension build",
+    "build:safari": "pnpm --filter @homepage/extension build:safari",
     "dev": "pnpm --filter @homepage/extension dev",
     "typecheck": "pnpm -r typecheck",
     "test": "bun test harness/",

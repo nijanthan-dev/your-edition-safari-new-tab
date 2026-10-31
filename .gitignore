@@ -19,3 +19,9 @@ harness/out/
 .claude/settings.local.json
 .DS_Store
 *.log
+
+# Safari / Xcode: per-user state, build output, signing
+xcuserdata/
+DerivedData/
+*.xcuserstate
+build/
