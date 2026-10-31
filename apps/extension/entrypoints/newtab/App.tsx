@@ -68,7 +68,8 @@ export default function App() {
         setAutoRebuild(settings.autoRebuild);
         setPrivacyFilter(settings.privacyFilter);
         setProviderLabel(describeProvider(settings));
-        setResumable(activeSession ?? null);
+        // Only an Anthropic build can be resumed; never offer it after a switch to BharatCode.
+        setResumable(settings.provider === "anthropic" ? (activeSession ?? null) : null);
         if (homepage?.code) setRenderedCode(toRenderable(homepage.code));
       } finally {
         setLoading(false);
@@ -92,6 +93,8 @@ export default function App() {
     const settings = await loadSettings();
     setProviderLabel(describeProvider(settings));
     setConnected(hasProviderKey(settings));
+    const activeSession = await extensionStore.get<string>(KEYS.activeSessionId);
+    setResumable(settings.provider === "anthropic" ? (activeSession ?? null) : null);
   }, []);
 
   const savePrompt = useCallback(

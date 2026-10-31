@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { DEFAULT_MODEL, runHomepageBuild, runHomepageBuildChat, type RunPhase } from "@homepage/agent-core";
+import { DEFAULT_MODEL, discardSession, runHomepageBuild, runHomepageBuildChat, type RunPhase } from "@homepage/agent-core";
 import { shouldAutoRebuild } from "./auto-rebuild";
 import { browserBridge } from "./browser-bridge";
 import { explainBuildError } from "./host-access";
@@ -102,8 +102,13 @@ export class BuildManager {
 
     const sessionId = await extensionStore.get<string>(KEYS.activeSessionId);
     if (sessionId) {
-      void this.startBuild({ resume: true });
-      return;
+      // Resume only while Anthropic is still the chosen provider. After a switch
+      // to BharatCode, delete the old session instead: the user's choice wins.
+      if ((await loadSettings()).provider === "anthropic") {
+        void this.startBuild({ resume: true });
+        return;
+      }
+      await this.discardAnthropicSession(sessionId);
     }
 
     // A BharatCode build has no server session to resume. If the flag is still
@@ -156,6 +161,17 @@ export class BuildManager {
 
   // ---- the build -----------------------------------------------------------
 
+  /** Delete a leftover Anthropic session and its uploads; clear the IDs even if that fails. */
+  private async discardAnthropicSession(sessionId: string) {
+    const { apiKey } = await loadSettings();
+    console.log("[BuildManager] provider is not Anthropic — discarding the interrupted Anthropic session");
+    if (apiKey) {
+      await discardSession(new Anthropic({ apiKey, dangerouslyAllowBrowser: true }), extensionStore, sessionId).catch(() => {});
+    }
+    await extensionStore.remove(KEYS.activeSessionId);
+    await extensionStore.remove(KEYS.uploadedFileIds);
+  }
+
   async startBuild(opts: { resume?: boolean; chatAttempt?: number } = {}) {
     if (this.running) {
       console.log("[BuildManager] startBuild ignored — a build is already running");
@@ -195,6 +211,10 @@ export class BuildManager {
         onLog: (line: string) => this.onLog(line),
       };
       const blockedSites = async () => (await loadSettings()).blockedSites;
+      // The chosen provider always wins. A resume request (an old tab's button)
+      // only applies to Anthropic; with BharatCode, drop the old session first.
+      const leftover = await extensionStore.get<string>(KEYS.activeSessionId);
+      if (settings.provider === "chat" && leftover) await this.discardAnthropicSession(leftover);
       if (settings.provider === "chat") {
         await extensionStore.set(KEYS.chatBuildActive, { attempts: opts.chatAttempt ?? 0 });
         if (opts.chatAttempt) this.onLog(`Safari stopped the build; restarting (attempt ${opts.chatAttempt} of ${MAX_CHAT_RESTARTS})`);

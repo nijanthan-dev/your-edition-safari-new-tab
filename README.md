@@ -157,6 +157,8 @@ Morning Tab can use 2 kinds of provider. Select one in **⚙️ Settings → Mod
 | Homepage quality | Best | Can be weaker, because the models are smaller |
 | Resume an interrupted build | Yes | No. Start a new build. |
 
+**Your choice sticks.** Morning Tab uses only the provider that you select. It never switches to the other one by itself. If an Anthropic build was interrupted and you then select BharatCode, Morning Tab does not resume the Anthropic build. It deletes that session and the pages uploaded to it.
+
 **If you choose BharatCode, turn on the on-device privacy filter.** Then only short summaries of each page leave your Mac.
 
 **Other providers.** The BharatCode option works with any API that follows the OpenAI chat-completions format and supports tool calls. In Settings, change **Base URL** and type the **Model** name. Morning Tab sends requests to `<Base URL>/chat/completions`.

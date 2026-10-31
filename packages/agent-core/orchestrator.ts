@@ -297,6 +297,19 @@ export async function runHomepageBuild(opts: RunOptions): Promise<HomepageBuildR
   }
 }
 
+/**
+ * Delete a session left behind by an interrupted build, with every file it
+ * uploaded, and forget both. For when the user switched provider, so the
+ * session will never be resumed: its event log still holds the pages it was sent.
+ */
+export async function discardSession(client: Anthropic, store: KVStore, sessionId: string): Promise<void> {
+  const uploaded = (await store.get<string[]>(STORAGE_KEYS.uploadedFileIds)) ?? [];
+  await Promise.allSettled(uploaded.map((id) => client.beta.files.delete(id)));
+  await store.remove(STORAGE_KEYS.uploadedFileIds);
+  await deleteSessionWhenSettled(client, sessionId).catch(() => {});
+  await store.remove(STORAGE_KEYS.activeSessionId);
+}
+
 /** The session is done with this turn: it ended, or went idle for any reason but a pending tool call. */
 function isTerminal(event: SessionEvent): boolean {
   if (event.type === "session.status_terminated") return true;

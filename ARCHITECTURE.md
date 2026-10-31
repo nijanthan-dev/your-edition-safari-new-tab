@@ -168,6 +168,13 @@ connect to a public address; behind a proxy at a private address, or when Chrome
 reports no address, the name check is all there is. History digests still list
 such a domain. Subresource loads are not intercepted.
 
+**The chosen provider always wins.** `tick()` resumes an interrupted Anthropic
+session only while `provider` is "anthropic". After a switch to "chat", the
+worker calls `discardSession` (agent-core) instead: it deletes the session's
+uploads and the session, then clears `activeSessionId`, so the old Anthropic
+build can never run again. The new tab offers "Resume interrupted build" only
+for Anthropic.
+
 **Restarting on a provider change.** The worker watches `storage.onChanged`
 for the provider, a key, the base URL or the model. During a build it cancels
 quietly (no error is shown) and starts again with the new settings. The bridge
