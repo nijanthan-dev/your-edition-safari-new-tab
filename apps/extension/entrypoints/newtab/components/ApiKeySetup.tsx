@@ -1,23 +1,34 @@
 import { useState } from "react";
+import type { Provider } from "@/lib/storage";
+import { ChatProviderNote } from "./ProviderOption";
 import { btn } from "./ui";
 
-export function ApiKeySetup({ onSave }: { onSave: (key: string) => void }) {
+export function ApiKeySetup({ onSave }: { onSave: (provider: Provider, key: string) => void }) {
+  const [provider, setProvider] = useState<Provider>("anthropic");
   const [value, setValue] = useState("");
-  const valid = value.trim().startsWith("sk-ant-");
+  const key = value.trim();
+  const valid = provider === "anthropic" ? key.startsWith("sk-ant-") : key.length > 0;
 
   return (
     <div style={{ maxWidth: 520, margin: "12vh auto", padding: 24, fontFamily: "system-ui" }}>
-      <h1 style={{ fontSize: 24 }}>Connect your Anthropic API key</h1>
+      <h1 style={{ fontSize: 24 }}>Connect a model provider</h1>
       <p style={{ color: "#555", lineHeight: 1.6 }}>
-        The agent runs inside this extension and talks to the Anthropic API directly. Your key
-        is stored in <code>chrome.storage.local</code> on this machine and is never sent
-        anywhere else.
+        The agent runs inside this extension and talks to the provider directly. Your key is
+        stored in the extension's local storage on this machine and is sent only to that provider.
       </p>
+      <div style={{ display: "flex", gap: 16, margin: "12px 0", fontSize: 14 }}>
+        <label style={{ cursor: "pointer" }}>
+          <input type="radio" checked={provider === "anthropic"} onChange={() => setProvider("anthropic")} /> Anthropic (Claude)
+        </label>
+        <label style={{ cursor: "pointer" }}>
+          <input type="radio" checked={provider === "chat"} onChange={() => setProvider("chat")} /> BharatCode
+        </label>
+      </div>
       <input
         type="password"
         value={value}
         onChange={(e) => setValue(e.target.value)}
-        placeholder="sk-ant-..."
+        placeholder={provider === "anthropic" ? "sk-ant-..." : "Your BharatCode API key"}
         style={{
           width: "100%",
           padding: 12,
@@ -25,12 +36,14 @@ export function ApiKeySetup({ onSave }: { onSave: (key: string) => void }) {
           borderRadius: 4,
           border: "1px solid #ddd",
           fontFamily: "ui-monospace, monospace",
+          boxSizing: "border-box",
         }}
       />
+      {provider === "chat" && <ChatProviderNote />}
       <button
         style={{ ...btn, marginTop: 16, opacity: valid ? 1 : 0.5 }}
         disabled={!valid}
-        onClick={() => onSave(value.trim())}
+        onClick={() => onSave(provider, key)}
       >
         Save key
       </button>

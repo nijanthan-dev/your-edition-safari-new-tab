@@ -65,7 +65,10 @@ it runs sandboxed, not in the extension's own page.
 
 ```
 packages/agent-core/      host-agnostic agent loop — imports no chrome.*, browser.*, or node:*
-  orchestrator.ts         runHomepageBuild: session lifecycle, event loop, tool dispatch, cleanup
+  orchestrator.ts         runHomepageBuild: session lifecycle, event loop, tool dispatch, cleanup;
+                          getHistoryDigest / loadAllowedPages: the tool logic both providers share
+  chat-loop.ts            runHomepageBuildChat: the same agent over an OpenAI-compatible API (BharatCode),
+                          with listFiles / grep / read / write answered from memory
   setup.ts                ensureAgent / ensureEnvironment (created once, cached by ID)
   prompt.ts               system prompt + per-build kickoff message
   schemas.ts              custom tool input schemas and defaults
@@ -162,6 +165,19 @@ private. That address is only reported when the extension's own API requests
 connect to a public address; behind a proxy at a private address, or when Chrome
 reports no address, the name check is all there is. History digests still list
 such a domain. Subresource loads are not intercepted.
+
+**Model providers.** `provider` in storage picks the path. "anthropic" runs
+Managed Agents as described above. "chat" runs `runHomepageBuildChat` against
+`<chatBaseUrl>/chat/completions` (BharatCode by default): a non-streaming tool
+loop that resends the whole conversation each turn, keeps scraped pages in a
+`Map`, and answers listFiles / grep / read / write itself. Both paths call
+`getHistoryDigest` and `loadAllowedPages`, so the blocked-sites list, the
+redirect recheck and the private-address check are identical. The chat path
+has no server-side session, so nothing needs deleting, but the provider's own
+retention applies (BharatCode's Free and Lite plans may log prompts). The
+system prompt comes from `buildSystemPrompt("local")`; the Managed Agents
+prompt is `buildSystemPrompt("sandbox")` and is byte-identical to before, so
+existing agents are not re-versioned.
 
 **On-device privacy filter (Safari, opt-in).** With the setting on, the bridge
 passes every scraped page through `filterPages` before agent-core sees it. The

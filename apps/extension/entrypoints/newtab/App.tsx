@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { DEFAULT_MODEL, DEFAULT_BLOCKED_SITES, type HomepageModel } from "@homepage/agent-core";
 import { BUILD_STEPS } from "@/lib/protocol";
-import { KEYS, extensionStore, loadHomepage, loadSettings, saveSetting } from "@/lib/storage";
+import { KEYS, extensionStore, hasProviderKey, loadHomepage, loadSettings, saveSetting, type Provider } from "@/lib/storage";
 import { toRenderable } from "@/lib/transpile";
 import { ApiKeySetup } from "./components/ApiKeySetup";
 import { BuildProgress } from "./components/BuildProgress";
@@ -13,7 +13,8 @@ import { useHomepageBuild } from "./useHomepageBuild";
 
 export default function App() {
   const [loading, setLoading] = useState(true);
-  const [apiKey, setApiKey] = useState<string | null>(null);
+  /** Whether the chosen provider has a key; until then the key screen shows. */
+  const [connected, setConnected] = useState(false);
   const [systemPrompt, setSystemPrompt] = useState("");
   const [blockedSites, setBlockedSites] = useState<string[]>(DEFAULT_BLOCKED_SITES);
   const [model, setModel] = useState<HomepageModel>(DEFAULT_MODEL);
@@ -46,7 +47,7 @@ export default function App() {
           loadHomepage(),
           extensionStore.get<string>(KEYS.activeSessionId),
         ]);
-        setApiKey(settings.apiKey);
+        setConnected(hasProviderKey(settings));
         setSystemPrompt(settings.systemPrompt);
         setBlockedSites(settings.blockedSites);
         setModel(settings.model);
@@ -60,9 +61,9 @@ export default function App() {
     })();
   }, []);
 
-  const saveKey = useCallback(async (key: string) => {
-    await saveSetting("apiKey", key);
-    setApiKey(key);
+  const saveKey = useCallback(async (provider: Provider, key: string) => {
+    await Promise.all([saveSetting("provider", provider), saveSetting(provider === "chat" ? "chatApiKey" : "apiKey", key)]);
+    setConnected(true);
   }, []);
 
   const savePrompt = useCallback(
@@ -93,7 +94,7 @@ export default function App() {
   }, []);
 
   if (loading) return <div style={{ padding: 20, textAlign: "center" }}>Loading…</div>;
-  if (!apiKey) return <ApiKeySetup onSave={saveKey} />;
+  if (!connected) return <ApiKeySetup onSave={saveKey} />;
 
   // With no homepage to fall back to, a running build takes over the tab.
   if (state.running && (!renderedCode || viewProgress)) {

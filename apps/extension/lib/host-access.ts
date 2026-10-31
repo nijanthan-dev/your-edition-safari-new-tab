@@ -1,4 +1,5 @@
 import { APIConnectionError } from "@anthropic-ai/sdk";
+import { ChatConnectionError } from "@homepage/agent-core";
 
 /**
  * Website access. The worker needs it to reach api.anthropic.com and to read
@@ -23,10 +24,11 @@ export async function requestHostAccess(): Promise<boolean> {
 /** Turn a failed request into a message that says what to do. */
 export async function explainBuildError(error: unknown): Promise<string> {
   const message = error instanceof Error ? error.message : String(error);
-  if (!(error instanceof APIConnectionError)) return message;
+  if (!(error instanceof APIConnectionError) && !(error instanceof ChatConnectionError)) return message;
+  const host = error instanceof ChatConnectionError ? "the model provider" : "api.anthropic.com";
   const granted = await browser.permissions.contains(ALL_SITES).catch(() => true);
   return granted
-    ? "Morning Tab can't reach api.anthropic.com. Check your internet connection, then try again."
-    : "Morning Tab can't reach api.anthropic.com, because it has no website access. " +
+    ? `Morning Tab can't reach ${host}. Check your internet connection, then try again.`
+    : `Morning Tab can't reach ${host}, because it has no website access. ` +
         "In Safari, open Settings > Extensions > Morning Tab and click Always Allow on Every Website. Then try again.";
 }

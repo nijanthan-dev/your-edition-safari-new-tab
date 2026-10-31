@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MODEL_CHOICES, normalizeBlockList, type HomepageModel } from "@homepage/agent-core";
 import { PrivacyFilterOption } from "./PrivacyFilterOption";
+import { ProviderOption } from "./ProviderOption";
 import { btn } from "./ui";
 
 export function SettingsModal({
@@ -71,10 +72,11 @@ export function SettingsModal({
         <p id="blocked-sites-help" style={{ color: "#888", fontSize: 12, margin: "6px 0 0" }}>
           One per line. Subdomains are included. Use *.example.com for wildcards.
         </p>
+        <ProviderOption />
         <label
           style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 16, color: "#333", fontSize: 14 }}
         >
-          Model
+          Claude model
           <select
             value={model}
             onChange={(e) => onChangeModel(e.target.value as HomepageModel)}

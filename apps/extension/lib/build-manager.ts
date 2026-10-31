@@ -1,5 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
-import { runHomepageBuild, type RunPhase } from "@homepage/agent-core";
+import { runHomepageBuild, runHomepageBuildChat, type RunPhase } from "@homepage/agent-core";
 import { shouldAutoRebuild } from "./auto-rebuild";
 import { browserBridge } from "./browser-bridge";
 import { explainBuildError } from "./host-access";
@@ -11,7 +11,7 @@ import {
   type BuildState,
   type PageMsg,
 } from "./protocol";
-import { KEYS, extensionStore, loadHomepage, loadSettings, saveHomepage } from "./storage";
+import { KEYS, extensionStore, hasProviderKey, loadHomepage, loadSettings, saveHomepage } from "./storage";
 
 type Port = Parameters<Parameters<typeof browser.runtime.onConnect.addListener>[0]>[0];
 
@@ -117,7 +117,7 @@ export class BuildManager {
     if (
       !shouldAutoRebuild({
         enabled: settings.autoRebuild,
-        hasApiKey: Boolean(settings.apiKey),
+        hasApiKey: hasProviderKey(settings),
         isRunning: this.running,
         lastBuildTimestamp: homepage?.timestamp,
         lastAutoAttemptTimestamp: lastAttempt,
@@ -148,12 +148,16 @@ export class BuildManager {
     this.controller = new AbortController();
 
     try {
-      const { apiKey, systemPrompt, model } = await loadSettings();
-      if (!apiKey) {
+      const settings = await loadSettings();
+      const { apiKey, systemPrompt, model } = settings;
+      if (!hasProviderKey(settings)) {
         // Manual builds are gated behind the key-setup screen and auto-builds
         // require a key, so this only happens if the key was removed.
         console.warn("[BuildManager] startBuild aborted — no API key in storage");
-        const message = "No Anthropic API key found. Add your key and try again.";
+        const message =
+          settings.provider === "chat"
+            ? "No API key found for the chosen provider. Add it in Settings and try again."
+            : "No Anthropic API key found. Add your key and try again.";
         this.state = { ...INITIAL_BUILD_STATE, phase: "error", error: message };
         this.broadcast({ kind: "error", message });
         return;
@@ -164,29 +168,39 @@ export class BuildManager {
       this.startKeepalive();
       console.log("[BuildManager] build started", { resume: Boolean(opts.resume) });
 
+      const callbacks = {
+        onPhase: (phase: RunPhase, detail?: string) => this.onPhase(phase, detail),
+        onText: (chunk: string) => this.onText(chunk),
+        onLog: (line: string) => this.onLog(line),
+      };
+      const blockedSites = async () => (await loadSettings()).blockedSites;
+
       // The key is the user's own, read from local storage — there is no server
       // to hide it behind. See ARCHITECTURE.md → Privacy.
-      const client = new Anthropic({ apiKey, dangerouslyAllowBrowser: true });
-
-      const resumeSessionId = opts.resume
-        ? await extensionStore.get<string>(KEYS.activeSessionId)
-        : undefined;
-
-      const result = await runHomepageBuild({
-        client,
-        bridge: browserBridge,
-        store: extensionStore,
-        userSystemPrompt: systemPrompt,
-        blockedSites: async () => (await loadSettings()).blockedSites,
-        model,
-        resumeSessionId,
-        signal: this.controller.signal,
-        callbacks: {
-          onPhase: (phase, detail) => this.onPhase(phase, detail),
-          onText: (chunk) => this.onText(chunk),
-          onLog: (line) => this.onLog(line),
-        },
-      });
+      const result =
+        settings.provider === "chat"
+          ? // No session to resume: the chat loop lives only as long as this worker.
+            await runHomepageBuildChat({
+              baseUrl: settings.chatBaseUrl,
+              apiKey: settings.chatApiKey!,
+              model: settings.chatModel,
+              bridge: browserBridge,
+              userSystemPrompt: systemPrompt,
+              blockedSites,
+              signal: this.controller.signal,
+              callbacks,
+            })
+          : await runHomepageBuild({
+              client: new Anthropic({ apiKey: apiKey!, dangerouslyAllowBrowser: true }),
+              bridge: browserBridge,
+              store: extensionStore,
+              userSystemPrompt: systemPrompt,
+              blockedSites,
+              model,
+              resumeSessionId: opts.resume ? await extensionStore.get<string>(KEYS.activeSessionId) : undefined,
+              signal: this.controller.signal,
+              callbacks,
+            });
 
       // Persist the raw TSX; the page transpiles it for preview.
       await saveHomepage(result.code);

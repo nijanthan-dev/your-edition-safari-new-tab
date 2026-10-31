@@ -1,19 +1,55 @@
 export const OUTPUT_PATH = "/mnt/session/outputs/homepage.tsx";
 
 /**
- * One system prompt for the whole build: choose pages, extract items, write the
- * component. A single agent is enough — extraction only needs `read`/`grep`.
+ * Where the agent's files live. "sandbox": Managed Agents mounts the pages into
+ * a session sandbox. "local": a chat-completions loop, where the extension holds
+ * the pages in memory and answers listFiles / grep / read / write itself.
  */
-export const HOMEPAGE_SYSTEM_PROMPT = `You build a personalized browser homepage from the user's own browsing history.
+export type ToolEnvironment = "sandbox" | "local";
 
-You have four capabilities:
+const CAPABILITIES: Record<ToolEnvironment, string> = {
+  sandbox: `You have four capabilities:
 - getHistory (custom tool) — a ranked digest of the user's most-visited domains.
 - getPageHtml (custom tool) — loads URLs in the user's REAL browser and mounts the
   sanitized HTML into your sandbox. Authenticated, JS-rendered pages work: the
   logged-in timeline, the private dashboard, the subscribed newsletter.
 - grep / glob / read — operate on those mounted files inside your sandbox.
 - write — your only way to deliver the finished homepage.
+`,
+  local: `You have six tools:
+- getHistory — a ranked digest of the user's most-visited domains.
+- getPageHtml — loads URLs in the user's REAL browser and stores the sanitized
+  HTML as files you can search. Authenticated, JS-rendered pages work: the
+  logged-in timeline, the private dashboard, the subscribed newsletter.
+- listFiles / grep / read — operate on those stored files.
+- write — your only way to deliver the finished homepage.
+`,
+};
 
+const STEP_3: Record<ToolEnvironment, string> = {
+  sandbox: `3. Call getPageHtml with those URLs. It returns a mountPath and a byte count per
+   page. USE THE RETURNED mountPath VERBATIM — do not construct paths yourself,
+   do not assume a page lives where you asked for it, and do not re-call
+   getPageHtml to find a file. If a path seems missing, glob for it.
+   Large pages: grep first to locate the interesting region, then read that range.
+   Small pages: read them whole.
+`,
+  local: `3. Call getPageHtml with those URLs. It returns a path and a byte count per
+   page. USE THE RETURNED path VERBATIM, and do not re-call getPageHtml to find
+   a file. If a path seems missing, call listFiles.
+   Large pages: grep first to locate the interesting region, then read that range.
+   Small pages: read them whole.
+`,
+};
+
+/**
+ * One system prompt for the whole build: choose pages, extract items, write the
+ * component. A single agent is enough — extraction only needs `read`/`grep`.
+ */
+export function buildSystemPrompt(tools: ToolEnvironment): string {
+  return `You build a personalized browser homepage from the user's own browsing history.
+
+${CAPABILITIES[tools]}
 ## Workflow
 
 1. Call getHistory once. You get a digest, not the full history. Note
@@ -25,13 +61,7 @@ You have four capabilities:
    tools, and anything that is obviously a logged-out marketing page. Scrape the
    domain root unless a specific path is clearly the content surface.
 
-3. Call getPageHtml with those URLs. It returns a mountPath and a byte count per
-   page. USE THE RETURNED mountPath VERBATIM — do not construct paths yourself,
-   do not assume a page lives where you asked for it, and do not re-call
-   getPageHtml to find a file. If a path seems missing, glob for it.
-   Large pages: grep first to locate the interesting region, then read that range.
-   Small pages: read them whole.
-
+${STEP_3[tools]}
 4. From each page, extract what belongs on a homepage:
    - headlines, articles, posts, product announcements, releases
    - social posts, discussion threads, notifications worth acting on
@@ -74,6 +104,9 @@ failed at its only job.
 
 When you have written the file, reply with a two-sentence summary of what you
 built and why. Do not paste the component source into your reply.`;
+}
+
+export const HOMEPAGE_SYSTEM_PROMPT = buildSystemPrompt("sandbox");
 
 export interface KickoffInput {
   now: Date;

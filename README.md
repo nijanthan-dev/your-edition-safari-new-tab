@@ -84,7 +84,7 @@ To find every copy that macOS knows about, run this command:
 ## Build your first homepage
 
 1. Open a new tab.
-2. Paste your Anthropic API key. Click **Save**.
+2. Choose **Anthropic (Claude)** or **BharatCode**, and paste that provider's API key. Click **Save key**.
 3. Optional: select **On-device privacy filter**. Do this before the first build if you want no page content to leave your Mac. The status line shows if Apple Intelligence is ready.
 4. Click **Build today's homepage**.
 
@@ -96,14 +96,14 @@ You can close the tab during a build. The build runs in the extension's backgrou
 
 ## What leaves your Mac
 
-Data leaves your Mac only during a build. It goes only to the Anthropic API, with your own API key.
+Data leaves your Mac only during a build. It goes only to the model provider that you choose, with your own API key: Anthropic (the default) or BharatCode. See [Model providers](#model-providers).
 
 A build sends:
 
 - A summary of the sites you visit: top domains, visit counts and some page titles
 - Up to 8 pages: the cleaned HTML, or only short summaries if the privacy filter is on
 
-Safari loads those pages with your sign-ins, so they can contain private content. Anthropic deletes the agent session and all uploaded pages when each build ends.
+Safari loads those pages with your sign-ins, so they can contain private content. With Anthropic, Morning Tab deletes the agent session and all uploaded pages when each build ends. BharatCode has its own retention rules (see below).
 
 ### The on-device privacy filter (optional)
 
@@ -136,6 +136,23 @@ To turn on Apple Intelligence:
 The filter is a strong extra protection, not a guarantee. The on-device model can miss a personal detail. The pattern check catches only fixed formats. Use **Sites the agent never reads** for sites that you never want opened.
 
 Your API key and the visit log stay in the extension's local storage on your Mac. Safari does not sync them. For more detail, read [ARCHITECTURE.md](./ARCHITECTURE.md#privacy).
+
+## Model providers
+
+Morning Tab can use 2 kinds of provider. Select one in **⚙️ Settings → Model provider**.
+
+| | Anthropic (Claude), the default | BharatCode |
+| --- | --- | --- |
+| Models | Claude Sonnet, Haiku or Opus | Qwen 3.8 27B or DeepSeek V4.1 Flash (open models) |
+| Cost | Pay for each build, by tokens | A flat monthly fee: ₹399 (Qwen only) or ₹999 (both models) |
+| How the agent runs | Claude Managed Agents: a session with a sandbox for the pages | A chat loop in the extension. The extension holds the pages in memory and answers the agent's file tools itself. |
+| What happens to your data | Morning Tab deletes the session and the uploaded pages after each build | BharatCode sends prompts to inference partners, some outside India. The Free and Lite plans may keep logs. See its [privacy policy](https://bharatcode.ai/privacy). |
+| Homepage quality | Best | Can be weaker, because the models are smaller |
+| Resume an interrupted build | Yes | No. Start a new build. |
+
+**If you choose BharatCode, turn on the on-device privacy filter.** Then only short summaries of each page leave your Mac.
+
+**Other providers.** The BharatCode option works with any API that follows the OpenAI chat-completions format and supports tool calls. In Settings, change **Base URL** and type the **Model** name. Morning Tab sends requests to `<Base URL>/chat/completions`.
 
 ## How Safari is different from Chrome
 
@@ -201,7 +218,7 @@ Click **Save & rebuild** to use them now.
 - If a page redirects to a blocked host, the extension drops the page before upload.
 - The extension always blocks local network addresses: localhost, private IPs, and `.local` and `.internal` hosts.
 
-**3. Model.** Select the Claude model that writes your page. The new model applies from your next build.
+**3. Model provider and model.** Select **Anthropic (Claude)** or **BharatCode or another OpenAI-compatible API**. See [Model providers](#model-providers). For Anthropic, select the Claude model that writes your page. The new choice applies from your next build.
 
 - **Claude Sonnet 5.5** (default): the best balance of quality and cost
 - **Claude Haiku 5.5**: the fastest and the cheapest
@@ -226,6 +243,8 @@ To rebuild now, click **↻ Rebuild** at the top right.
 - **Updates.** After you pull new code, run `npx pnpm@10.11.1 install:safari`.
 
 ## How it works
+
+With Anthropic, these steps run in a Claude Managed Agents session. With BharatCode, they run in a chat loop inside the extension, with the same tools and the same safety checks.
 
 1. **`getHistory`**: the agent gets a ranked summary of the domains you visit most.
 2. **`getPageHtml`**: the agent selects up to 8 pages. The extension opens them in a background window and cleans them. If the privacy filter is on, the extension replaces each page with its on-device summary. Then it gives the pages to the agent as files.

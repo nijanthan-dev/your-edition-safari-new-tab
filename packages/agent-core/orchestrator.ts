@@ -12,6 +12,7 @@ import type {
   KVStore,
   PageRef,
   RunCallbacks,
+  ScrapedPage,
   RunPhase,
 } from "./types";
 
@@ -19,7 +20,7 @@ type SessionEvent = Anthropic.Beta.Sessions.BetaManagedAgentsSessionEvent;
 type CustomToolUse = Anthropic.Beta.Sessions.BetaManagedAgentsAgentCustomToolUseEvent;
 
 /** Callbacks with the optionality resolved, so call sites don't repeat `?.`. */
-interface Emit {
+export interface Emit {
   phase(phase: RunPhase, detail?: string): void;
   text(chunk: string): void;
   log(line: string): void;
@@ -312,7 +313,16 @@ async function runGetHistory(
   emit: Emit,
   blockedSites: string[],
 ): Promise<GetHistoryResult> {
-  const input = event.input as { daysToAnalyze?: number; maxResults?: number };
+  return getHistoryDigest(event.input as { daysToAnalyze?: number; maxResults?: number }, bridge, emit, blockedSites);
+}
+
+/** The getHistory tool for any host: blocked domains are dropped, then the rest is narrowed. */
+export async function getHistoryDigest(
+  input: { daysToAnalyze?: number; maxResults?: number },
+  bridge: BrowserBridge,
+  emit: Emit,
+  blockedSites: string[],
+): Promise<GetHistoryResult> {
   const daysToAnalyze = input.daysToAnalyze ?? DEFAULTS.daysToAnalyze;
   const maxResults = input.maxResults ?? DEFAULTS.maxResults;
 
@@ -340,34 +350,12 @@ async function runGetPageHtml(
     blockedSites: string[];
   },
 ): Promise<GetPageHtmlResult> {
-  const input = event.input as { urls: string[]; loadDelayMs?: number };
-  ctx.emit.phase("scraping", `${input.urls.length} pages`);
-
-  const allowed: string[] = [];
-  const blocked: GetPageHtmlResult["failed"] = [];
-  for (const url of input.urls) {
-    // Match on the URL the browser will load; malformed URLs never reach the signed-in browser.
-    if (isAllowedUrl(url, ctx.blockedSites)) allowed.push(url);
-    else blocked.push({ url, reason: "blocked by the user's settings" });
-  }
-
-  // Skip the bridge entirely when nothing is left, so no scraper window opens.
-  const { pages: loaded, failed } = allowed.length
-    ? await ctx.bridge.getPageHtml({
-        urls: allowed,
-        loadDelayMs: input.loadDelayMs ?? DEFAULTS.loadDelayMs,
-      })
-    : { pages: [], failed: [] };
-
-  // A redirect can land on a blocked host, and a public-looking name (fritz.box, an
-  // intranet name) can resolve to a private address; drop what it read before anything is uploaded.
-  const pages = loaded.filter((page) => {
-    const urlAllowed = !page.finalUrl || isAllowedUrl(page.finalUrl, ctx.blockedSites);
-    if (urlAllowed && !(page.ip && isPrivateAddress(page.ip))) return true;
-    blocked.push({ url: page.url, reason: "blocked by the user's settings" });
-    return false;
-  });
-  if (blocked.length) ctx.emit.log(`blocked: ${blocked.length} url(s)`);
+  const { pages, blocked, failed } = await loadAllowedPages(
+    event.input as { urls: string[]; loadDelayMs?: number },
+    ctx.bridge,
+    ctx.emit,
+    ctx.blockedSites,
+  );
 
   const refs: PageRef[] = [];
   const mountFailures = [...blocked, ...failed];
@@ -411,6 +399,47 @@ async function runGetPageHtml(
   }
 
   return { pages: refs, failed: mountFailures };
+}
+
+/**
+ * The page-loading half of getPageHtml for any host. Blocked and non-HTTP(S)
+ * URLs never reach the browser; a redirect onto a blocked host or a page served
+ * from a private address is dropped before anything leaves the machine.
+ */
+export async function loadAllowedPages(
+  input: { urls: string[]; loadDelayMs?: number },
+  bridge: BrowserBridge,
+  emit: Emit,
+  blockedSites: string[],
+): Promise<{ pages: ScrapedPage[]; blocked: GetPageHtmlResult["failed"]; failed: GetPageHtmlResult["failed"] }> {
+  emit.phase("scraping", `${input.urls.length} pages`);
+
+  const allowed: string[] = [];
+  const blocked: GetPageHtmlResult["failed"] = [];
+  for (const url of input.urls) {
+    // Match on the URL the browser will load; malformed URLs never reach the signed-in browser.
+    if (isAllowedUrl(url, blockedSites)) allowed.push(url);
+    else blocked.push({ url, reason: "blocked by the user's settings" });
+  }
+
+  // Skip the bridge entirely when nothing is left, so no scraper window opens.
+  const { pages: loaded, failed } = allowed.length
+    ? await bridge.getPageHtml({
+        urls: allowed,
+        loadDelayMs: input.loadDelayMs ?? DEFAULTS.loadDelayMs,
+      })
+    : { pages: [], failed: [] };
+
+  // A redirect can land on a blocked host, and a public-looking name (fritz.box, an
+  // intranet name) can resolve to a private address; drop what it read before anything is uploaded.
+  const pages = loaded.filter((page) => {
+    const urlAllowed = !page.finalUrl || isAllowedUrl(page.finalUrl, blockedSites);
+    if (urlAllowed && !(page.ip && isPrivateAddress(page.ip))) return true;
+    blocked.push({ url: page.url, reason: "blocked by the user's settings" });
+    return false;
+  });
+  if (blocked.length) emit.log(`blocked: ${blocked.length} url(s)`);
+  return { pages, blocked, failed };
 }
 
 // ---------------------------------------------------------------------------

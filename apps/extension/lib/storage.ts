@@ -1,4 +1,5 @@
 import {
+  CHAT_PROVIDER_PRESETS,
   DEFAULT_MODEL,
   DEFAULT_BLOCKED_SITES,
   MODEL_CHOICES,
@@ -22,6 +23,11 @@ export const KEYS = {
   autoRebuild: "autoRebuild",
   /** Safari only: send pages through the on-device privacy filter first. */
   privacyFilter: "privacyFilter",
+  /** "anthropic" (Managed Agents) or "chat" (an OpenAI-compatible API such as BharatCode). */
+  provider: "provider",
+  chatApiKey: "chatApiKey",
+  chatBaseUrl: "chatBaseUrl",
+  chatModel: "chatModel",
   /** ISO timestamp of the last auto-build *attempted* (success or not). */
   lastAutoBuildAttempt: "lastAutoBuildAttempt",
   /** Throttled mirror of the live build state, for tabs that open while the worker sleeps. */
@@ -46,7 +52,19 @@ export interface Settings {
   autoRebuild: boolean;
   /** Unset means off — the filter needs Apple Intelligence, which not every Mac has. */
   privacyFilter: boolean;
+  provider: Provider;
+  chatApiKey: string | null;
+  chatBaseUrl: string;
+  chatModel: string;
 }
+
+export type Provider = "anthropic" | "chat";
+
+const BHARATCODE = CHAT_PROVIDER_PRESETS[0];
+
+/** Whether the chosen provider has a key, so a build can start. */
+export const hasProviderKey = (s: Pick<Settings, "provider" | "apiKey" | "chatApiKey">) =>
+  Boolean(s.provider === "chat" ? s.chatApiKey : s.apiKey);
 
 /** The `KVStore` agent-core persists its agent/environment/session IDs through. */
 export const extensionStore: KVStore = {
@@ -70,6 +88,10 @@ export async function loadSettings(): Promise<Settings> {
     KEYS.model,
     KEYS.autoRebuild,
     KEYS.privacyFilter,
+    KEYS.provider,
+    KEYS.chatApiKey,
+    KEYS.chatBaseUrl,
+    KEYS.chatModel,
   ]);
   const model = s[KEYS.model] as string | undefined;
   return {
@@ -80,10 +102,14 @@ export async function loadSettings(): Promise<Settings> {
     model: MODEL_CHOICES.find((m) => m.id === model)?.id ?? DEFAULT_MODEL,
     autoRebuild: s[KEYS.autoRebuild] !== false,
     privacyFilter: s[KEYS.privacyFilter] === true,
+    provider: s[KEYS.provider] === "chat" ? "chat" : "anthropic",
+    chatApiKey: (s[KEYS.chatApiKey] as string | undefined) ?? null,
+    chatBaseUrl: (s[KEYS.chatBaseUrl] as string | undefined) ?? BHARATCODE.baseUrl,
+    chatModel: (s[KEYS.chatModel] as string | undefined) ?? BHARATCODE.models[0],
   };
 }
 
-export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "model" | "autoRebuild" | "privacyFilter">(
+export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "model" | "autoRebuild" | "privacyFilter" | "provider" | "chatApiKey" | "chatBaseUrl" | "chatModel">(
   key: K,
   value: Settings[K],
 ): Promise<void> {
