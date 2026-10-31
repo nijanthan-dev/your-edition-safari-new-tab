@@ -20,6 +20,23 @@ cleanup() {
 }
 trap cleanup EXIT
 
+# Safari 27 can crash when an extension's app is replaced while Safari runs: it
+# loads the extension again and inserts a toolbar item that is already there.
+if pgrep -xq Safari; then
+  if [ -t 0 ]; then
+    printf "Safari is open. Replacing the app now can crash Safari. Quit Safari and continue? [y/N] "
+    read -r answer
+    case "$answer" in
+      [yY]*) osascript -e 'quit app "Safari"' ;;
+      *) echo "Stopped. Quit Safari, then run this again."; exit 1 ;;
+    esac
+    while pgrep -xq Safari; do sleep 1; done
+  else
+    echo "Safari is open. Quit Safari, then run this again." >&2
+    exit 1
+  fi
+fi
+
 echo "Building $APP_NAME..."
 # An ad hoc signature: Safari accepts it once "Allow unsigned extensions" is on.
 xcodebuild -quiet \
@@ -37,4 +54,4 @@ ditto "$BUILT" "$DEST"
 open "$DEST"
 
 echo "Installed $DEST"
-echo "Next: in Safari, open Develop > Developer Settings and select Allow unsigned extensions."
+echo "Next: open Safari. Then open Develop > Developer Settings and select Allow unsigned extensions."

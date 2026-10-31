@@ -33,6 +33,7 @@ You need:
 
 1. Run the 3 commands at the top of this page.
 2. The last command builds the app, installs it in `~/Applications/Morning Tab.app` and opens it. You do not need to open Xcode.
+3. If Safari is open, the command asks you to quit Safari first. Safari 27 can crash when the app is replaced while Safari is open.
 
 The install script keeps exactly one copy of the app. macOS registers every app that Xcode builds, and Safari shows one **Morning Tab** for each copy that it finds. So the script builds in a temporary folder, copies the app to `~/Applications`, then deletes the build copy.
 
@@ -49,7 +50,8 @@ The install script keeps exactly one copy of the app. macOS registers every app 
 
 | Problem | Cause | Fix |
 | --- | --- | --- |
-| **Morning Tab** is not in the extension list | **Allow unsigned extensions** is off, or Safari checked before the app was installed | Quit Safari (⌘Q). Open Safari. Do step 2 again. |
+| **Morning Tab** is not in the extension list | **Allow unsigned extensions** is off. Safari turns it off each time Safari quits or crashes. | Open **Develop → Developer Settings…** and select **Allow unsigned extensions** again. If it is still missing, quit Safari (⌘Q), open it, and do that step again. |
+| Safari crashes during an install | Safari 27 crashes when it loads a replaced extension and adds its toolbar button again. This is a bug in Safari. | Quit Safari before you run `install:safari`. The command now asks you to do this. |
 | **Morning Tab** shows 2 or more times | macOS has more than one copy of the app, for example from **Run** in Xcode | Run `npx pnpm@10.11.1 install:safari`. Then delete any other copy of `Morning Tab.app`. |
 | "Connection error." or "has no website access" | Safari has not given Morning Tab website access. Morning Tab needs it to reach the Anthropic API and to read pages. | Click **Build today's homepage** and allow access in the prompt. Or open **Settings → Extensions → Morning Tab** and click **Always Allow on Every Website…**. |
 | The privacy filter status says "not available" | Apple Intelligence is off or still downloading | See [The on-device privacy filter](#the-on-device-privacy-filter-optional). |
