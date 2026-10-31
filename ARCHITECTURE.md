@@ -179,11 +179,20 @@ app) and `HAS_WEB_REQUEST`. No other file checks the browser itself.
 ## The name and the bundle ID
 
 The project was called Morning Tab before version 0.2. The app, the extension
-and the repo now use Your Edition, but the bundle ID stays
-`io.github.nijanthan-dev.morning-tab`. Safari keys an extension's storage to its
-bundle ID, so a new ID would drop every user's API keys and visit log.
-`install:safari` removes an old `~/Applications/Morning Tab.app`, because two
-apps with one bundle ID show as two extensions.
+and the repo now use Your Edition. The bundle ID stays
+`io.github.nijanthan-dev.morning-tab`.
+
+The plan was that the same bundle ID keeps the extension's storage. It did not:
+after the upgrade, Safari treated Your Edition as a new extension, and its
+storage was empty (no API keys, no visit log, no settings). Apple does not
+document what Safari uses to key that storage. So an upgrade from Morning Tab
+needs the key again, and the visit log starts again unless the user exported
+it first.
+
+The bundle ID still stays as it is. A new ID would reset the storage one more
+time for everyone who already upgraded. `install:safari` deletes an old
+`~/Applications/Morning Tab.app`, because two apps with one bundle ID show as
+two extensions.
 
 ## The default look
 

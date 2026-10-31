@@ -75,6 +75,16 @@ The install script keeps exactly one copy of the app. macOS registers every app 
 
 To sign and notarize your own builds, see [Sign your own builds](#sign-your-own-builds-optional).
 
+### Upgrade from Morning Tab
+
+Morning Tab is the name of this project before version 0.2. After the upgrade, Safari treats Your Edition as a new extension, with empty storage.
+
+1. Before you upgrade, open **⚙️ Settings → Improve this tab** in Morning Tab and click **Export my visit log**. If you already upgraded, skip this step.
+2. Install Your Edition. The install script deletes the old `Morning Tab.app`.
+3. In **Safari → Settings → Extensions**, turn on **Your Edition**.
+4. Open a new tab. Enter your API key again, and turn on the privacy filter again if you used it.
+5. Optional: click **Import history…** and choose the file from step 1, or a Safari history export.
+
 ### If something goes wrong
 
 | Problem | Cause | Fix |
