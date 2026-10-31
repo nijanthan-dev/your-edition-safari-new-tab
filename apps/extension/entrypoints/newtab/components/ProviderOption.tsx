@@ -25,6 +25,7 @@ export function ProviderOption() {
   const [baseUrl, setBaseUrl] = useState<string>(BHARATCODE.baseUrl);
   const [model, setModel] = useState<string>(BHARATCODE.models[0]);
   const [key, setKey] = useState("");
+  const [anthropicKey, setAnthropicKey] = useState("");
 
   useEffect(() => {
     void loadSettings().then((s) => {
@@ -32,6 +33,7 @@ export function ProviderOption() {
       setBaseUrl(s.chatBaseUrl);
       setModel(s.chatModel);
       setKey(s.chatApiKey ?? "");
+      setAnthropicKey(s.apiKey ?? "");
     });
   }, []);
 
@@ -50,6 +52,26 @@ export function ProviderOption() {
           <option value="chat">BharatCode or another OpenAI-compatible API</option>
         </select>
       </label>
+      {provider === "anthropic" && (
+        <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
+          API key
+          <input
+            type="password"
+            value={anthropicKey}
+            placeholder="sk-ant-..."
+            onChange={(e) => setAnthropicKey(e.target.value)}
+            onBlur={() => {
+              const next = anthropicKey.trim();
+              if (next.startsWith("sk-ant-")) void saveSetting("apiKey", next);
+            }}
+            style={{ ...field, flex: 1, fontFamily: "ui-monospace, monospace" }}
+          />
+        </label>
+      )}
+      <p style={help}>
+        Changing the provider or a key during a build restarts the build with the new settings.
+        Pages read in the last 2 hours are reused, so the restart is quick.
+      </p>
       {provider === "chat" && (
         <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 8 }}>

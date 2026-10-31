@@ -6,6 +6,7 @@ import { toRenderable } from "@/lib/transpile";
 import { ApiKeySetup } from "./components/ApiKeySetup";
 import { BuildProgress } from "./components/BuildProgress";
 import { HomepagePreview } from "./components/HomepagePreview";
+import { ImproveTabPanel } from "./components/ImproveTabPanel";
 import { PrivacyFilterOption } from "./components/PrivacyFilterOption";
 import { SettingsModal } from "./components/SettingsModal";
 import { btn, errorBox } from "./components/ui";
@@ -116,6 +117,7 @@ export default function App() {
           homepage from what it finds today.
         </p>
         <PrivacyFilterOption checked={privacyFilter} onChange={togglePrivacyFilter} />
+        <ImproveTabPanel />
         {state.error && (
           <div style={{ ...errorBox, margin: "16px 0", padding: 12, borderRadius: 4 }}>{state.error}</div>
         )}

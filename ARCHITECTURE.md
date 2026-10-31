@@ -84,7 +84,9 @@ apps/extension/           MV3 extension (WXT + React)
     build-manager.ts      single-flight build host, broadcast, keepalive, reattach
     browser-bridge.ts     BrowserBridge over chrome.history / chrome.tabs (+ the privacy filter when on)
     history.ts            getHistory: group and rank history by domain
-    visit-log.ts          Safari: the extension's own log of page loads (no history API)
+    visit-log.ts          Safari: the extension's own log of page loads (no history API); import/export
+    history-import.ts     parse Safari / Chrome Takeout / own history files (ZIP: History.json only)
+    page-cache.ts         pages read in the last 2 h, reused when a build restarts
     scraper.ts            getPageHtml: load URLs in a background window, sanitize HTML
     privacy-filter.ts     Safari: send pages to the app's on-device model via native messaging
     privacy-digest.ts     pure half: page → [n]-numbered text, model items → HTML, redaction
@@ -165,6 +167,21 @@ private. That address is only reported when the extension's own API requests
 connect to a public address; behind a proxy at a private address, or when Chrome
 reports no address, the name check is all there is. History digests still list
 such a domain. Subresource loads are not intercepted.
+
+**Restarting on a provider change.** The worker watches `storage.onChanged`
+for the provider, a key, the base URL or the model. During a build it cancels
+quietly (no error is shown) and starts again with the new settings. The bridge
+keeps sanitized pages for 2 hours (`pageCache`), so the restart reuses them and
+only the model calls repeat. Cached pages still pass the blocked-site and
+private-address checks, and the privacy filter, because those run after the
+bridge.
+
+**Imported history (Safari).** The Improve this tab panel reads the file in the
+page and sends only the parsed visits to the worker (`runtime.sendMessage`),
+because the worker owns the in-memory visit log and its delayed save. From a
+ZIP, fflate decompresses only `History.json`, so passwords and cards in a
+Safari export are never read. Visits older than 30 days are dropped, and the
+log's start moves back to the oldest imported visit.
 
 **Model providers.** `provider` in storage picks the path. "anthropic" runs
 Managed Agents as described above. "chat" runs `runHomepageBuildChat` against

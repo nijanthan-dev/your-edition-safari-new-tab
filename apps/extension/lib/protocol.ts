@@ -40,6 +40,11 @@ export type PageMsg =
   | { kind: "startBuild"; resume?: boolean } // no-op if one is already running
   | { kind: "cancel" };
 
+/** One-off requests from a page to the worker (runtime.sendMessage), for the Safari visit log. */
+export type VisitLogRequest =
+  | { kind: "importVisits"; visits: import("./history-import").ImportedVisit[] }
+  | { kind: "exportVisits" };
+
 // worker → page (broadcast to every connected tab)
 export type BuildMsg =
   | { kind: "snapshot"; state: BuildState }

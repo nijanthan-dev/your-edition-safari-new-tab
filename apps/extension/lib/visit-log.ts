@@ -1,3 +1,4 @@
+import { EXPORT_FORMAT, type ImportedVisit } from "./history-import";
 import { isScraperTab } from "./scraper";
 import { extensionStore, KEYS } from "./storage";
 
@@ -77,6 +78,43 @@ async function recordTitle(url: string | undefined, title: string) {
   if (!v || v.title === title) return;
   v.title = title;
   scheduleSave(log);
+}
+
+/**
+ * Merge visits from an imported history file. Visits older than the retention
+ * window are dropped. The log's start moves back to the oldest imported visit,
+ * so the young-log rule in history.ts treats it as the history it now covers.
+ */
+export async function importVisits(visits: ImportedVisit[]): Promise<{ imported: number; total: number }> {
+  const log = await load();
+  const cutoff = Date.now() - RETENTION_MS;
+  let imported = 0;
+  for (const visit of visits) {
+    if (!isWebUrl(visit.url) || visit.lastVisitTime < cutoff) continue;
+    const v = log.visits[visit.url];
+    log.visits[visit.url] = {
+      title: v?.title || visit.title,
+      lastVisitTime: Math.max(v?.lastVisitTime ?? 0, visit.lastVisitTime),
+      visitCount: (v?.visitCount ?? 0) + visit.visitCount,
+    };
+    log.startedAt = Math.min(log.startedAt, visit.lastVisitTime);
+    imported++;
+  }
+  clearTimeout(saveTimer);
+  prune(log);
+  await extensionStore.set(KEYS.visitLog, log);
+  return { imported, total: Object.keys(log.visits).length };
+}
+
+/** The whole log as a file the user can keep or import again. */
+export async function exportVisits() {
+  const log = await load();
+  return {
+    format: EXPORT_FORMAT,
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    visits: Object.entries(log.visits).map(([url, v]) => ({ url, ...v })),
+  };
 }
 
 /**

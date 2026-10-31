@@ -44,6 +44,8 @@ export class BuildManager {
   private keepalive: ReturnType<typeof setInterval> | null = null;
   private lastSnapshotAt = 0;
   private snapshotTimer: ReturnType<typeof setTimeout> | null = null;
+  /** Set when the provider or a key changed mid-build: start again once the cancel lands. */
+  private restartPending = false;
 
   // ---- port lifecycle ------------------------------------------------------
 
@@ -210,6 +212,11 @@ export class BuildManager {
       await this.mirror(true);
       console.log("[BuildManager] build done", { bytes: result.code.length, source: result.source });
     } catch (error) {
+      // A cancel for a provider change is not a failure: the restart below takes over.
+      if (this.restartPending) {
+        console.log("[BuildManager] build cancelled for a restart");
+        return;
+      }
       const message = await explainBuildError(error);
       this.state = { ...this.state, running: false, phase: "error", error: message };
       this.broadcast({ kind: "error", message });
@@ -220,7 +227,23 @@ export class BuildManager {
       this.running = false;
       this.controller = null;
       this.stopKeepalive();
+      if (this.restartPending) {
+        this.restartPending = false;
+        void this.startBuild();
+      }
     }
+  }
+
+  /**
+   * The provider or a key changed. A running build is cancelled and started
+   * again with the new settings; pages read in the cancelled build are reused
+   * from the page cache (browser-bridge.ts), so only the model calls repeat.
+   */
+  restartIfRunning() {
+    if (!this.running) return;
+    console.log("[BuildManager] provider settings changed — restarting the build");
+    this.restartPending = true;
+    this.cancel();
   }
 
   cancel() {

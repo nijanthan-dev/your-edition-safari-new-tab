@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MODEL_CHOICES, normalizeBlockList, type HomepageModel } from "@homepage/agent-core";
+import { ImproveTabPanel } from "./ImproveTabPanel";
 import { PrivacyFilterOption } from "./PrivacyFilterOption";
 import { ProviderOption } from "./ProviderOption";
 import { btn } from "./ui";
@@ -112,6 +113,7 @@ export function SettingsModal({
           browser is open between 5am and noon), so your next tab shows a fresh one (uses your API key).
         </p>
         <PrivacyFilterOption checked={privacyFilter} onChange={onTogglePrivacyFilter} />
+        <ImproveTabPanel />
         <div style={{ display: "flex", gap: 12, marginTop: 20, justifyContent: "flex-end" }}>
           <button
             onClick={onClose}

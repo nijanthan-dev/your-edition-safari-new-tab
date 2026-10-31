@@ -94,7 +94,7 @@ The first build takes a few minutes. The progress view shows each step as the ag
 
 You can close the tab during a build. The build runs in the extension's background worker. Any new tab shows the build.
 
-> **Your first homepage is thin.** Safari has no history for the agent to read (see below). The homepage gets better over the first few days.
+> **Your first homepage is thin.** Safari has no history for the agent to read (see below). To fix this now, [import your Safari history](#improve-this-tab-import-your-safari-history). Otherwise, the homepage gets better over the first few days.
 
 ## What leaves your Mac
 
@@ -137,7 +137,7 @@ To turn on Apple Intelligence:
 
 The filter is a strong extra protection, not a guarantee. The on-device model can miss a personal detail. The pattern check catches only fixed formats. Use **Sites the agent never reads** for sites that you never want opened.
 
-Your API key and the visit log stay in the extension's local storage on your Mac. Safari does not sync them. For more detail, read [ARCHITECTURE.md](./ARCHITECTURE.md#privacy).
+Your API keys, the visit log and the page cache stay in the extension's local storage on your Mac. Safari does not sync them. The page cache holds the cleaned pages from the last 2 hours, so a restarted build does not open them again. For more detail, read [ARCHITECTURE.md](./ARCHITECTURE.md#privacy).
 
 ## Model providers
 
@@ -180,6 +180,21 @@ Morning Tab can use 2 kinds of provider. Select one in **⚙️ Settings → Mod
 
 Apple has not said publicly why Safari has no history API. Apple puts a strong focus on privacy, and that can be a reason. This is our guess, not a statement from Apple.
 
+### Improve this tab: import your Safari history
+
+You can give Morning Tab your Safari history from before the install. The **Improve this tab** panel is on the first-build screen and in **⚙️ Settings**. It takes about 2 minutes:
+
+1. In Safari, choose **File → Export Browsing Data to File…**.
+2. Select only **History**, then save the file.
+3. In Morning Tab, click **Import history…** and choose that file (`.zip` or `.json`).
+
+- Morning Tab reads only `History.json` from the file. It never opens passwords or the other files in a Safari export.
+- It keeps visits from the last 30 days, in the visit log on your Mac.
+- Apple does not document this file format. Morning Tab reads the fields that Chromium's Safari importer also reads: `url`, `title`, `time_usec` and `visit_count`.
+- It also reads a Chrome history file from Google Takeout.
+
+**Export my visit log** saves the visit log as a JSON file. You can import that file again later, for example on another Mac.
+
 ### What Morning Tab does instead
 
 Morning Tab records the pages you load in Safari from the day you install it. The code is in [`visit-log.ts`](apps/extension/lib/visit-log.ts).
@@ -220,7 +235,10 @@ Click **Save & rebuild** to use them now.
 - If a page redirects to a blocked host, the extension drops the page before upload.
 - The extension always blocks local network addresses: localhost, private IPs, and `.local` and `.internal` hosts.
 
-**3. Model provider and model.** Select **Anthropic (Claude)** or **BharatCode or another OpenAI-compatible API**. See [Model providers](#model-providers). For Anthropic, select the Claude model that writes your page. The new choice applies from your next build.
+**3. Model provider and model.** Select **Anthropic (Claude)** or **BharatCode or another OpenAI-compatible API**, and enter that provider's API key. See [Model providers](#model-providers). For Anthropic, select the Claude model that writes your page.
+
+- If no build is running, the new choice applies from your next build.
+- If a build is running, Morning Tab restarts it with the new provider or key. Pages read in the last 2 hours come from the page cache, so the restart does not open them again. Only the model's work starts over.
 
 - **Claude Sonnet 5.5** (default): the best balance of quality and cost
 - **Claude Haiku 5.5**: the fastest and the cheapest
