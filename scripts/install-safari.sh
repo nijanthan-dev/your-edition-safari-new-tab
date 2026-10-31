@@ -65,7 +65,7 @@ fi
 echo "Building $APP_NAME..."
 xcodebuild -quiet \
   -project "$ROOT/apps/safari/$APP_NAME/$APP_NAME.xcodeproj" \
-  -scheme "$APP_NAME" -configuration Release \
+  -scheme "$APP_NAME" -configuration Release -destination "generic/platform=macOS" \
   -derivedDataPath "$BUILD_DIR" \
   CODE_SIGN_STYLE=Manual "$@" \
   build
