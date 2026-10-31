@@ -12,7 +12,32 @@ APP_NAME="Morning Tab"
 DEST="$HOME/Applications/$APP_NAME.app"
 LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 BUILD_DIR=$(mktemp -d)
+
+# Optional: sign with your own certificate (see signing.local.env.example).
+SIGN_IDENTITY=""
+TEAM_ID=""
+[ -f "$ROOT/signing.local.env" ] && . "$ROOT/signing.local.env"
+if [ -n "$SIGN_IDENTITY" ]; then
+  echo "Signing with your certificate (team $TEAM_ID)."
+  set -- CODE_SIGN_IDENTITY="$SIGN_IDENTITY" DEVELOPMENT_TEAM="$TEAM_ID" OTHER_CODE_SIGN_FLAGS=--timestamp
+else
+  # An ad hoc signature: Safari accepts it once "Allow unsigned extensions" is on.
+  set -- CODE_SIGN_IDENTITY=- DEVELOPMENT_TEAM=
+fi
 BUILT="$BUILD_DIR/Build/Products/Release/$APP_NAME.app"
+
+# Xcode adds get-task-allow (debuggers may attach) even to this signed Release
+# build. Sign each bundle again, inside out, with the same entitlements minus that one.
+resign_without_debugging() {
+  for bundle in "$BUILT/Contents/PlugIns/$APP_NAME Extension.appex" "$BUILT"; do
+    entitlements="$BUILD_DIR/entitlements.plist"
+    codesign -d --entitlements :- "$bundle" > "$entitlements" 2>/dev/null
+    /usr/libexec/PlistBuddy -c "Delete :com.apple.security.get-task-allow" "$entitlements" 2>/dev/null || true
+    codesign --force --options runtime --timestamp \
+      --entitlements "$entitlements" --sign "$SIGN_IDENTITY" "$bundle"
+  done
+  codesign --verify --deep --strict "$BUILT"
+}
 
 cleanup() {
   "$LSREGISTER" -u "$BUILT" 2>/dev/null || true
@@ -38,13 +63,13 @@ if pgrep -xq Safari; then
 fi
 
 echo "Building $APP_NAME..."
-# An ad hoc signature: Safari accepts it once "Allow unsigned extensions" is on.
 xcodebuild -quiet \
   -project "$ROOT/apps/safari/$APP_NAME/$APP_NAME.xcodeproj" \
   -scheme "$APP_NAME" -configuration Release \
   -derivedDataPath "$BUILD_DIR" \
-  CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= \
+  CODE_SIGN_STYLE=Manual "$@" \
   build
+[ -n "$SIGN_IDENTITY" ] && resign_without_debugging
 
 osascript -e "quit app \"$APP_NAME\"" 2>/dev/null || true
 mkdir -p "$HOME/Applications"
@@ -54,4 +79,8 @@ ditto "$BUILT" "$DEST"
 open "$DEST"
 
 echo "Installed $DEST"
-echo "Next: open Safari. Then open Develop > Developer Settings and select Allow unsigned extensions."
+if [ -n "$SIGN_IDENTITY" ]; then
+  echo "Next: open Safari, then Settings > Extensions, and select Morning Tab."
+else
+  echo "Next: open Safari. Then open Develop > Developer Settings and select Allow unsigned extensions."
+fi

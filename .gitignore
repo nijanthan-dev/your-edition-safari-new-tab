@@ -25,3 +25,6 @@ xcuserdata/
 DerivedData/
 *.xcuserstate
 build/
+
+# Local code signing (your certificate and team ID)
+*.local.env

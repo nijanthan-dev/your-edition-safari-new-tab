@@ -91,6 +91,7 @@ apps/extension/           MV3 extension (WXT + React)
     transpile.ts          TSX → JS for the preview
 
 scripts/install-safari.sh build the app in a temp folder, install one copy in ~/Applications
+                          (signs with signing.local.env when present; git ignores that file)
 
 apps/safari/Morning Tab/  Xcode project: the Mac app that carries the extension
   Morning Tab Extension/

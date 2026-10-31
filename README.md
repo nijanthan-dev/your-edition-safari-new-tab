@@ -33,9 +33,22 @@ You need:
 
 1. Run the 3 commands at the top of this page.
 2. The last command builds the app, installs it in `~/Applications/Morning Tab.app` and opens it. You do not need to open Xcode.
-3. If Safari is open, the command asks you to quit Safari first. Safari 27 can crash when the app is replaced while Safari is open.
+3. If Safari is open, the command asks you to quit Safari first. Safari 27 can crash if the command replaces the app while Safari is open.
 
 The install script keeps exactly one copy of the app. macOS registers every app that Xcode builds, and Safari shows one **Morning Tab** for each copy that it finds. So the script builds in a temporary folder, copies the app to `~/Applications`, then deletes the build copy.
+
+### Optional: sign with your own certificate
+
+If you have an Apple Developer certificate, the install command can sign the app with it. Then Safari treats Morning Tab as a signed extension, so you do not need **Allow unsigned extensions**.
+
+1. Copy `signing.local.env.example` to `signing.local.env`.
+2. Run `security find-identity -v -p codesigning`. Copy the SHA-1 hash of your **Developer ID Application** or **Apple Development** certificate into `SIGN_IDENTITY`.
+3. Copy the team ID, the code in brackets, into `TEAM_ID`.
+4. Run `npx pnpm@10.11.1 install:safari` again.
+
+Git ignores `signing.local.env`, so your certificate and team ID stay on your Mac. The script also signs the app without the debugging entitlement (`get-task-allow`) that Xcode adds. It keeps the App Sandbox that Safari needs.
+
+The app is not notarized. That is not necessary for an app that you build on your own Mac. Do not share this build with other people.
 
 ### Part 2 of 2: Enable the extension in Safari (about 5 minutes)
 
