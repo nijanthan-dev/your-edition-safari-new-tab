@@ -5,7 +5,7 @@
 ```bash
 git clone https://github.com/nijanthan-dev/morning-tab-safari.git
 cd morning-tab-safari
-npx pnpm@10.11.1 install && npx pnpm@10.11.1 build:safari
+npx pnpm@10.11.1 install && npx pnpm@10.11.1 install:safari
 ```
 
 Morning Tab replaces the Safari new tab page. An AI agent reads the sites you visit and writes a new homepage for you each morning.
@@ -25,16 +25,16 @@ Morning Tab replaces the Safari new tab page. An AI agent reads the sites you vi
 
 You need:
 
-- A Mac with Xcode
+- A Mac with Xcode 27 or later
 - [Node.js](https://nodejs.org) 20 or later
 - An [Anthropic API key](https://console.anthropic.com)
 
-### Part 1 of 2: Build the app (about 5 minutes)
+### Part 1 of 2: Build and install the app (about 5 minutes)
 
 1. Run the 3 commands at the top of this page.
-2. Open `apps/safari/Morning Tab/Morning Tab.xcodeproj` in Xcode.
-3. Select the **Morning Tab** scheme and **My Mac**.
-4. Press **⌘R**. Xcode builds the app and opens it.
+2. The last command builds the app, installs it in `~/Applications/Morning Tab.app` and opens it. You do not need to open Xcode.
+
+The install script keeps exactly one copy of the app. macOS registers every app that Xcode builds, and Safari shows one **Morning Tab** for each copy that it finds. So the script builds in a temporary folder, copies the app to `~/Applications`, then deletes the build copy.
 
 ### Part 2 of 2: Enable the extension in Safari (about 5 minutes)
 
@@ -44,6 +44,20 @@ You need:
 4. Open **Settings → General**. Set **New tabs open with** to **Morning Tab**.
 
 > Safari clears **Allow unsigned extensions** each time Safari quits. After a restart, do step 2 again.
+
+### If something goes wrong
+
+| Problem | Cause | Fix |
+| --- | --- | --- |
+| **Morning Tab** is not in the extension list | **Allow unsigned extensions** is off, or Safari checked before the app was installed | Quit Safari (⌘Q). Open Safari. Do step 2 again. |
+| **Morning Tab** shows 2 or more times | macOS has more than one copy of the app, for example from **Run** in Xcode | Run `npx pnpm@10.11.1 install:safari`. Then delete any other copy of `Morning Tab.app`. |
+| The privacy filter status says "not available" | Apple Intelligence is off or still downloading | See [The on-device privacy filter](#the-on-device-privacy-filter-optional). |
+
+To find every copy that macOS knows about, run this command:
+
+```bash
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -dump | grep "^path:.*Morning Tab"
+```
 
 ## Build your first homepage
 
@@ -186,7 +200,7 @@ To rebuild now, click **↻ Rebuild** at the top right.
 - **What the agent reads.** The agent ranks the sites you visit and opens up to 8 of them in each build. It skips search engines, webmail, banking and logged-out marketing pages. If it cannot open a page, it reports the failure.
 - **Links are real.** Each link on your page comes from a page that the agent read. The agent has an instruction to never invent a URL.
 - **Interrupted builds.** If Safari closes during a build, the next new tab shows **Resume interrupted build**.
-- **Updates.** After you pull new code, run `npx pnpm@10.11.1 build:safari`. Then press **⌘R** in Xcode.
+- **Updates.** After you pull new code, run `npx pnpm@10.11.1 install:safari`.
 
 ## How it works
 
@@ -210,6 +224,7 @@ harness               Bun scripts that run agent-core outside a browser and test
 
 ```bash
 pnpm build:safari        # Safari bundle for the Xcode project
+pnpm install:safari      # build the app and install one copy in ~/Applications
 pnpm typecheck           # all packages
 pnpm test                # unit tests (no API calls, needs Bun)
 

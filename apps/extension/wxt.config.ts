@@ -3,6 +3,13 @@ import { defineConfig } from "wxt";
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
+  hooks: {
+    // The scraper is injected at runtime, so WXT writes "content_scripts": [].
+    // Chrome ignores the empty list; Safari rejects it as an invalid entry.
+    "build:manifestGenerated": (_wxt, manifest) => {
+      if (!manifest.content_scripts?.length) delete manifest.content_scripts;
+    },
+  },
   manifest: ({ browser }) => {
     // Safari lacks the history and notifications APIs. lib/visit-log.ts stands in for history.
     const safari = browser === "safari";

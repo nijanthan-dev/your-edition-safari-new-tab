@@ -90,6 +90,8 @@ apps/extension/           MV3 extension (WXT + React)
     storage.ts            every chrome.storage key, settings, saved homepage
     transpile.ts          TSX → JS for the preview
 
+scripts/install-safari.sh build the app in a temp folder, install one copy in ~/Applications
+
 apps/safari/Morning Tab/  Xcode project: the Mac app that carries the extension
   Morning Tab Extension/
     SafariWebExtensionHandler.swift  answers sendNativeMessage ("status", "summarize")
