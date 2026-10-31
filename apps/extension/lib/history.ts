@@ -1,34 +1,24 @@
 import type { RawSiteMetadata } from "@homepage/agent-core";
-import { hasHistoryApi, searchVisits } from "./visit-log";
+import { DAY_MS, readVisits, type VisitItem } from "./visit-log";
 
-const DAY_MS = 24 * 60 * 60 * 1000;
 /** Domains seen fewer times than this are noise, not interests. */
 const MIN_VISITS = 2;
-/** Until the visit log is this old, every domain in it counts (it starts from open tabs). */
+/** Until the history is this old, every domain in it counts (Safari's log starts from open tabs). */
 const YOUNG_LOG_DAYS = 3;
 
 /**
- * Read chrome.history (or, on Safari, the extension's own visit log), group it by domain, rank by relevance, and return
- * all domains so agent-core can exclude blocked sites before counting and
+ * Read chrome.history (or Safari's visit log), group it by domain, rank by
+ * relevance, and return all domains so agent-core can exclude blocked sites before counting and
  * narrowing for the context window in `buildHistoryDigest`.
  */
 export async function getHistorySites(
   daysToAnalyze: number,
   _maxResults: number,
 ): Promise<{ sites: RawSiteMetadata[]; totalSitesSeen: number }> {
-  const startTime = Date.now() - daysToAnalyze * DAY_MS;
-  let items: { url?: string; title?: string; lastVisitTime?: number; visitCount?: number }[];
-  let days = daysToAnalyze;
-  let minVisits = MIN_VISITS;
-  if (hasHistoryApi()) {
-    items = await browser.history.search({ text: "", startTime, maxResults: 10_000 });
-  } else {
-    const log = await searchVisits(startTime);
-    items = log.items;
-    // Average over the days actually logged, not the window asked for.
-    days = Math.min(daysToAnalyze, log.daysCovered);
-    if (log.daysCovered < YOUNG_LOG_DAYS) minVisits = 1;
-  }
+  const { items, daysCovered } = await readVisits(Date.now() - daysToAnalyze * DAY_MS);
+  // Average over the days actually logged, not the window asked for.
+  const days = Math.min(daysToAnalyze, daysCovered);
+  const minVisits = daysCovered < Math.min(YOUNG_LOG_DAYS, daysToAnalyze) ? 1 : MIN_VISITS;
 
   const ranked = rank(groupByDomain(items, days), days, minVisits);
   return {
@@ -38,7 +28,7 @@ export async function getHistorySites(
 }
 
 function groupByDomain(
-  items: { url?: string; title?: string; lastVisitTime?: number; visitCount?: number }[],
+  items: VisitItem[],
   days: number,
 ): RawSiteMetadata[] {
   const byDomain = new Map<string, RawSiteMetadata>();

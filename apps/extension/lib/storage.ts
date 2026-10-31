@@ -24,6 +24,8 @@ export const KEYS = {
   lastAutoBuildAttempt: "lastAutoBuildAttempt",
   /** Throttled mirror of the live build state, for tabs that open while the worker sleeps. */
   buildSnapshot: "buildSnapshot",
+  /** Safari only: the extension's own log of page loads (lib/visit-log.ts). */
+  visitLog: "visitLog",
 } as const;
 
 export interface Homepage {

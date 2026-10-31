@@ -271,7 +271,7 @@ export async function scrapeUrls(
     addresses.set(details.tabId, details.ip);
   };
   const direct = apiAddress !== undefined && !isPrivateAddress(apiAddress);
-  if (direct && browser.webRequest) {
+  if (direct) {
     browser.webRequest.onResponseStarted.addListener(recordAddress, {
       urls: ["http://*/*", "https://*/*"],
       types: ["main_frame"],

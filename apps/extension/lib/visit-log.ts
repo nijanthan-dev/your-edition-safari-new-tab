@@ -1,4 +1,5 @@
-import { extensionStore } from "./storage";
+import { isScraperTab } from "./scraper";
+import { extensionStore, KEYS } from "./storage";
 
 /**
  * Safari has no `history` API, so on Safari the extension keeps its own log of
@@ -6,43 +7,42 @@ import { extensionStore } from "./storage";
  * so history.ts ranks both the same way.
  */
 export interface VisitItem {
-  url: string;
+  url?: string;
   title?: string;
-  lastVisitTime: number;
-  visitCount: number;
+  lastVisitTime?: number;
+  visitCount?: number;
 }
 
 interface VisitLog {
   /** When logging began, so a young log can be told apart from a quiet one. */
   startedAt: number;
-  visits: Record<string, Omit<VisitItem, "url">>;
+  visits: Record<string, { title?: string; lastVisitTime: number; visitCount: number }>;
 }
 
-const LOG_KEY = "visitLog";
-const DAY_MS = 24 * 60 * 60 * 1000;
+export const DAY_MS = 24 * 60 * 60 * 1000;
 /** Kept for longer than the widest history window the agent asks for. */
 const RETENTION_MS = 30 * DAY_MS;
 const MAX_URLS = 5000;
+/** Page loads arrive in bursts; write the log once they settle. */
+const SAVE_DELAY_MS = 1000;
 
 /** Whether this browser has a real history API to read instead. */
-export const hasHistoryApi = () => typeof browser.history?.search === "function";
+const hasHistoryApi = () => typeof browser.history?.search === "function";
 
-async function load(): Promise<VisitLog> {
-  return (await extensionStore.get<VisitLog>(LOG_KEY)) ?? { startedAt: Date.now(), visits: {} };
-}
+// Read once per worker lifetime, then kept in memory and written back after changes.
+let cached: Promise<VisitLog> | undefined;
+const load = () =>
+  (cached ??= extensionStore
+    .get<VisitLog>(KEYS.visitLog)
+    .then((log) => log ?? { startedAt: Date.now(), visits: {} }));
 
-// Page loads arrive in bursts; serialize the read-modify-write so none is lost.
-let queue: Promise<void> = Promise.resolve();
-function update(fn: (log: VisitLog) => void): Promise<void> {
-  queue = queue
-    .then(async () => {
-      const log = await load();
-      fn(log);
-      prune(log);
-      await extensionStore.set(LOG_KEY, log);
-    })
-    .catch((error) => console.error("Visit log update failed:", error));
-  return queue;
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
+function scheduleSave(log: VisitLog) {
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    prune(log);
+    extensionStore.set(KEYS.visitLog, log).catch((error) => console.error("Visit log save failed:", error));
+  }, SAVE_DELAY_MS);
 }
 
 function prune(log: VisitLog) {
@@ -57,43 +57,53 @@ function prune(log: VisitLog) {
 const isWebUrl = (url?: string): url is string => !!url && /^https?:\/\//.test(url);
 
 /** Count one visit to `url`. */
-export function recordVisit(url: string | undefined, title?: string) {
+async function recordVisit(url: string | undefined, title?: string) {
   if (!isWebUrl(url)) return;
-  return update((log) => {
-    const v = log.visits[url];
-    log.visits[url] = {
-      title: title || v?.title,
-      lastVisitTime: Date.now(),
-      visitCount: (v?.visitCount ?? 0) + 1,
-    };
-  });
+  const log = await load();
+  const v = log.visits[url];
+  log.visits[url] = {
+    title: title || v?.title,
+    lastVisitTime: Date.now(),
+    visitCount: (v?.visitCount ?? 0) + 1,
+  };
+  scheduleSave(log);
 }
 
 /** A page's title often arrives after it finishes loading; fill it in without counting a visit. */
-export function recordTitle(url: string | undefined, title: string) {
+async function recordTitle(url: string | undefined, title: string) {
   if (!isWebUrl(url) || !title) return;
-  return update((log) => {
-    const v = log.visits[url];
-    if (v) v.title = title;
-  });
+  const log = await load();
+  const v = log.visits[url];
+  if (!v || v.title === title) return;
+  v.title = title;
+  scheduleSave(log);
 }
 
-/** Visits since `startTime`, plus how many days the log actually covers. */
-export async function searchVisits(startTime: number): Promise<{ items: VisitItem[]; daysCovered: number }> {
+/**
+ * Visits since `startTime`: from chrome.history where it exists, otherwise from
+ * the log. `daysCovered` is how much of the window the source actually spans.
+ */
+export async function readVisits(
+  startTime: number,
+): Promise<{ items: VisitItem[]; daysCovered: number }> {
+  const windowDays = (Date.now() - startTime) / DAY_MS;
+  if (hasHistoryApi()) {
+    const items = await browser.history.search({ text: "", startTime, maxResults: 10_000 });
+    return { items, daysCovered: windowDays };
+  }
   const log = await load();
   const items = Object.entries(log.visits)
     .filter(([, v]) => v.lastVisitTime >= startTime)
     .map(([url, v]) => ({ url, ...v }));
-  return { items, daysCovered: Math.max(1, (Date.now() - log.startedAt) / DAY_MS) };
+  return { items, daysCovered: Math.max(1, Math.min(windowDays, (Date.now() - log.startedAt) / DAY_MS)) };
 }
 
-/**
- * Listen for page loads. `ignoreTab` skips tabs the extension itself opened,
- * so scraping a page doesn't count as you visiting it.
- */
-export function startVisitLog(ignoreTab: (tab: { id?: number; windowId?: number }) => boolean) {
+/** On browsers without a history API, log page loads (not the scraper's own tabs). */
+export function startVisitLog() {
+  if (hasHistoryApi()) return;
+
   browser.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
-    if (tab.incognito || ignoreTab(tab)) return;
+    if (tab.incognito || isScraperTab(tab)) return;
     if (changeInfo.status === "complete") void recordVisit(tab.url, tab.title);
     else if (changeInfo.title) void recordTitle(tab.url, changeInfo.title);
   });
