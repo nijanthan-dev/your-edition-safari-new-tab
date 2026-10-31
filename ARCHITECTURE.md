@@ -102,11 +102,17 @@ apps/extension/           MV3 extension (WXT + React)
     protocol.ts           page ↔ worker messages, the five UI build steps, the Safari ping
     host-access.ts        ask for website access on Build; readable connection errors
     auto-rebuild.ts       when to rebuild on a schedule
-    storage.ts            every chrome.storage key, settings, saved homepage
+    storage.ts            every chrome.storage key, settings (providerConfig), saved homepage
+    platform.ts           what this browser can do: history API, visit log, on-device model, webRequest
     transpile.ts          TSX → JS for the preview
 
 scripts/install-safari.sh build the app in a temp folder, install one copy in ~/Applications
-                          (signs with signing.local.env when present; git ignores that file)
+                          (signs with signing.local.env when present; git ignores that file).
+                          With YOUR_EDITION_OUTPUT=<dir> it only builds, signs and notarizes:
+                          the release workflow's mac-app job runs it that way.
+
+.github/workflows/release.yml  version → mac-app (macOS runner, secrets in the "release"
+                          environment; skipped without them) → release (bundles + GitHub release)
 
 apps/safari/Your Edition/  Xcode project: the Mac app that carries the extension
   Your Edition Extension/
@@ -120,7 +126,7 @@ harness/                  Bun scripts: drive agent-core with a fixture/fetch bri
 
 | Command | Proves |
 |---|---|
-| `pnpm test` | 56 unit tests: history digest, blocked sites, auto-rebuild, stream reconnect, the chat loop, the privacy digest, history import, the page caches, the prompt and the house style, session discard |
+| `pnpm test` | 57 unit tests: history digest, blocked sites, auto-rebuild, stream reconnect, the chat loop, the privacy digest, history import, the page caches, the prompt and the house style, session discard, shortening seen chat results |
 | `pnpm agent:run` | Full build against the real API: tools, mounting, sandbox grep/read, deliverable, cleanup |
 | `pnpm agent:verify` | The deliverable transforms, evaluates and server-renders |
 | `pnpm agent:resume-test` | A build killed with a tool call pending can be reattached and finished |
@@ -162,11 +168,29 @@ arrived in the history fetch.
 
 **`files.upload()` takes no `purpose`.** Just `{ file }`.
 
+## Platform differences
+
+`lib/platform.ts` answers every Chrome-versus-Safari question once:
+`HAS_HISTORY_API` (a feature test), `USES_VISIT_LOG` (its opposite: the visit
+log, the import panel and the worker's import/export messages turn on
+together), `HAS_ON_DEVICE_MODEL` (the Safari build, which ships inside the Mac
+app) and `HAS_WEB_REQUEST`. No other file checks the browser itself.
+
+## The name and the bundle ID
+
+The project was called Morning Tab before version 0.2. The app, the extension
+and the repo now use Your Edition, but the bundle ID stays
+`io.github.nijanthan-dev.morning-tab`. Safari keys an extension's storage to its
+bundle ID, so a new ID would drop every user's API keys and visit log.
+`install:safari` removes an old `~/Applications/Morning Tab.app`, because two
+apps with one bundle ID show as two extensions.
+
 ## The default look
 
 `HOUSE_STYLE` (`packages/agent-core/prompt.ts`) describes a broadsheet front page, the
 look of `docs/preview.png`: Mac system fonts only (Bodoni 72 / Didot headlines, Iowan
-Old Style text), cream paper, a masthead, a dateline and three columns. It goes in the
+Old Style text), cream paper, a "Your Edition" masthead, a dateline that names the
+edition (morning, afternoon, evening or night) and three columns. It goes in the
 kickoff message, after the user's standing instructions, not in the system prompt. So
 both providers get it, the user's instructions can replace it, and the Managed Agents
 agent is not re-versioned. No web fonts are loaded, so a new tab makes no font request.
@@ -187,16 +211,20 @@ connect to a public address; behind a proxy at a private address, or when Chrome
 reports no address, the name check is all there is. History digests still list
 such a domain. Subresource loads are not intercepted.
 
-**The chosen provider always wins.** `tick()` resumes an interrupted Anthropic
-session only while `provider` is "anthropic". After a switch to "chat", the
-worker calls `discardSession` (agent-core) instead: it deletes the session's
-uploads and the session, then clears `activeSessionId`, so the old Anthropic
-build can never run again. The new tab offers "Resume interrupted build" only
-for Anthropic.
+**The chosen provider always wins.** `BuildManager.dropStaleSession` is the one
+place that decides: a leftover Anthropic session is kept only while `provider`
+is "anthropic". Otherwise the worker calls `discardSession` (agent-core): it
+deletes the session's uploads and the session, then clears `activeSessionId`,
+so the old Anthropic build can never run again. `tick()` and `startBuild` both
+call it. The new tab offers "Resume interrupted build" only for Anthropic.
 
-**Restarting on a provider change.** The worker watches `storage.onChanged`
-for the provider, a key, the base URL or the model. During a build it cancels
-quietly (no error is shown) and starts again with the new settings. The bridge
+**Restarting on a provider change.** The provider, both keys, the base URL and
+the model are one storage object (`providerConfig`), written once by **Save
+provider**. The worker watches `storage.onChanged` for that one key, so one
+Save is one restart, with no debounce. During a build it cancels quietly (no
+error is shown) and starts again with the new settings. `loadSettings` still
+reads the old separate keys when `providerConfig` is missing, and the first
+Save removes them, so an upgrade keeps the user's keys. The bridge
 keeps sanitized pages for 2 hours (`pageCache`), so the restart reuses them and
 only the model calls repeat. Cached pages still pass the blocked-site and
 private-address checks, and the privacy filter, because those run after the
@@ -208,8 +236,11 @@ build could stop mid-filter with the tab showing its last progress line. While
 a build runs, each open tab sends `{ kind: "ping" }` every 10 s
 (`PING_INTERVAL_MS`). If the worker is stopped anyway, a restart continues: the
 filter's summaries are cached for 2 h (`filteredCache`, keyed by URL and a hash
-of the page), Anthropic sessions resume as before, and a BharatCode build left
-`chatBuildActive` set, which `tick()` uses to start it again (at most 3 times).
+of the page). Every build writes an `activeBuild` record (`{ provider, attempts }`)
+when it starts and removes it when this worker sees it end. If `tick()` finds
+the record, Safari stopped the worker mid-build: an Anthropic session resumes
+from its event log, and any other build starts again from the caches. Both stop
+after 3 attempts with a clear error.
 
 **Imported history (Safari).** The Improve this tab panel reads the file in the
 page and sends only the parsed visits to the worker (`runtime.sendMessage`),
@@ -222,7 +253,10 @@ log's start moves back to the oldest imported visit.
 Managed Agents as described above. "chat" runs `runHomepageBuildChat` against
 `<chatBaseUrl>/chat/completions` (BharatCode by default): a non-streaming tool
 loop that resends the whole conversation each turn, keeps scraped pages in a
-`Map`, and answers listFiles / grep / read / write itself. Both paths call
+`Map`, and answers listFiles / grep / read / write itself. Because each turn
+resends everything, `shrinkSeen` replaces tool results over 2,000 characters,
+and earlier `write` calls, with a short note once the model has replied to
+them. The pages stay in the `Map`, so the model can read them again. Both paths call
 `getHistoryDigest` and `loadAllowedPages`, so the blocked-sites list, the
 redirect recheck and the private-address check are identical. The chat path
 has no server-side session, so nothing needs deleting, but the provider's own

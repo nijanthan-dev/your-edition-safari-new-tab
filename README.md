@@ -1,81 +1,89 @@
-# Your Edition: an AI new tab page for Safari, with an on-device privacy filter
+# Your Edition: a private AI front page for every Safari new tab
 
-**Start here:** run these 3 commands, then do the Safari steps below. Setup takes about 10 minutes.
+**Start here:** download `Your-Edition-<version>-mac.zip` from the [latest release](https://github.com/nijanthan-dev/your-edition-safari-new-tab/releases/latest), then do [the 4 Safari steps](#2-turn-it-on-in-safari-about-3-minutes). Setup takes about 5 minutes.
 
-```bash
-git clone https://github.com/nijanthan-dev/your-edition-safari-new-tab.git
-cd morning-tab-safari
-npx pnpm@10.11.1 install && npx pnpm@10.11.1 install:safari
-```
+Your Edition replaces the Safari new tab page. An AI agent reads the sites you visit and writes a front page for you each morning. You read it in every new tab, all day.
 
-Your Edition replaces the Safari new tab page. An AI agent reads the sites you visit and writes a new homepage for you each morning.
+**Private by design.** There is no Your Edition server. Your visit log stays on your Mac. Your own API key goes only to the AI provider that you choose. An optional on-device filter lets Apple Intelligence read each page on your Mac, so only short summaries leave it.
 
-**Privacy option:** turn on the [on-device privacy filter](#the-on-device-privacy-filter-optional). Apple Intelligence then reads each page on your Mac, and only short summaries go to your model provider.
-
-![An example homepage in a morning-newspaper style](docs/preview.png)
-<sub>Illustration of the default look. The agent builds your homepage from your own browsing, so your stories will be different.</sub>
+![An example front page in a broadsheet-newspaper style](docs/preview.png)
+<sub>Illustration of the default look. The agent builds your page from your own browsing, so your stories will be different.</sub>
 
 > **Credit.** Your Edition is a Safari port of [**AI Homepage (ThariqS/ai-newtab)**](https://github.com/ThariqS/ai-newtab) by [Thariq Shihipar](https://github.com/ThariqS).
-> The agent, the new tab interface and the design are his work. This fork adds Safari support.
-> This fork is not affiliated with the original author, Apple or Anthropic. The license is MIT, the same as the original.
+> The agent, the new tab interface and the design are his work. This fork adds Safari support and the privacy features.
+> This fork is not affiliated with the original author, Apple, Anthropic or BharatCode. The license is MIT, the same as the original.
 
 ---
+
+## Privacy at a glance
+
+| Stays on your Mac | Leaves your Mac only during a build | Never leaves your Mac |
+| --- | --- | --- |
+| Your visit log (up to 30 days) | A summary of the sites you visit: top domains, visit counts and some page titles | Your Safari history from before the install, unless you import it |
+| Your API keys and settings | Up to 8 pages: the cleaned HTML, or only short summaries when the privacy filter is on | Pages in private windows |
+| Pages read in the last 2 hours (a cache) | Both go only to the provider that you choose, with your own key | Sites on your **Sites the agent never reads** list |
+| The finished front page | | Passwords and cards, even inside a Safari export file |
+
+- **No server.** The extension talks to the provider directly. Nothing goes to the author of this fork.
+- **No keys in the code.** Each person enters their own Anthropic or BharatCode key. The key stays in the extension's local storage on that Mac.
+- **No web fonts.** The default look uses fonts that every Mac has, so opening a tab sends no request to a font service.
+- **No sync.** Safari does not sync the visit log, the keys or the settings to iCloud.
+
+The [on-device privacy filter](#the-on-device-privacy-filter-optional) is optional and off by default. It is a strong extra protection, not a guarantee. For more detail, read [What leaves your Mac](#what-leaves-your-mac).
 
 ## Install
 
 You need:
 
-- A Mac with Xcode 27 or later
-- [Node.js](https://nodejs.org) 20 or later
+- A Mac with macOS 27 or later
 - An API key from [Anthropic](https://console.anthropic.com) or [BharatCode](https://bharatcode.ai)
 
-### Part 1 of 2: Build and install the app (about 5 minutes)
+### 1. Get the app (about 2 minutes)
 
-1. Run the 3 commands at the top of this page.
-2. The last command builds the app, installs it in `~/Applications/Your Edition.app` and opens it. You do not need to open Xcode.
-3. If Safari is open, the command asks you to quit Safari first. Safari 27 can crash if the command replaces the app while Safari is open.
+1. Open the [latest release](https://github.com/nijanthan-dev/your-edition-safari-new-tab/releases/latest).
+2. Download `Your-Edition-<version>-mac.zip`.
+3. Open the zip. Move **Your Edition.app** to your **Applications** folder.
+4. Open **Your Edition** one time. Then you can close it.
 
-The app, its extension and the extension manifest all use one version: the latest release tag, for example `0.1.9`. Each install also gets a new build number (the date and time), so macOS and Safari never see two different builds with the same number.
+Apple notarized the app, so macOS opens it without a warning. If a release has no Mac app, [build it yourself](#build-it-yourself-about-10-minutes).
 
-The install script keeps exactly one copy of the app. macOS registers every app that Xcode builds, and Safari shows one **Your Edition** for each copy that it finds. So the script builds in a temporary folder, copies the app to `~/Applications`, then deletes the build copy.
+### 2. Turn it on in Safari (about 3 minutes)
 
-### Optional: sign with your own certificate
+1. Open **Safari → Settings → Extensions**. Select **Your Edition**.
+2. Click **Always Allow on Every Website…**. Your Edition needs this access to reach your AI provider and to read the pages that it summarizes.
+3. Open **Settings → General**. Set **New tabs open with** to **Your Edition**.
+4. Open a new tab.
 
-If you have a **Developer ID Application** certificate, the install command can sign the app with it and have Apple notarize it. Then Safari treats Your Edition as a trusted extension, so you do not need **Allow unsigned extensions**.
+### Build it yourself (about 10 minutes)
 
-Safari hides a Developer ID app that Apple has not notarized, even with **Allow unsigned extensions** on. So the script signs only when it can also notarize.
+You also need Xcode 27 or later and [Node.js](https://nodejs.org) 20 or later. Run these 3 commands:
 
-1. Copy `signing.local.env.example` to `signing.local.env`.
-2. Run `security find-identity -v -p codesigning`. Copy the SHA-1 hash of your **Developer ID Application** certificate into `SIGN_IDENTITY`.
-3. Copy the team ID, the code in brackets, into `TEAM_ID`.
-4. Make an app-specific password at [account.apple.com](https://account.apple.com) (**Sign-In and Security → App-Specific Passwords**).
-5. Store it in your keychain. Run this command and paste the password when it asks:
-   `xcrun notarytool store-credentials your-edition-notary --apple-id YOUR_APPLE_ID --team-id YOUR_TEAM_ID`
-6. Set `NOTARY_PROFILE=your-edition-notary` in `signing.local.env`.
-7. Quit Safari. Run `npx pnpm@10.11.1 install:safari` again. Notarization adds 2 to 5 minutes.
+```bash
+git clone https://github.com/nijanthan-dev/your-edition-safari-new-tab.git
+cd your-edition-safari-new-tab
+npx pnpm@10.11.1 install && npx pnpm@10.11.1 install:safari
+```
 
-Git ignores `signing.local.env`, so your certificate and team ID stay on your Mac. The script also signs the app without the debugging entitlement (`get-task-allow`) that Xcode adds. It keeps the App Sandbox that Safari needs.
+1. The last command builds the app, installs it in `~/Applications/Your Edition.app` and opens it. You do not need to open Xcode.
+2. If Safari is open, the command asks you to quit Safari first. Safari 27 can crash if the command replaces the app while Safari is open.
+3. A build that you make yourself is not notarized. So in Safari, open **Settings → Advanced** and select **Show features for web developers**. Then open **Develop → Developer Settings…** and select **Allow unsigned extensions**.
+4. Do [the Safari steps](#2-turn-it-on-in-safari-about-3-minutes).
 
-The password stays in your keychain. The script uses only the profile name.
+> Safari clears **Allow unsigned extensions** each time Safari quits. After a restart, do step 3 again. A notarized app from a release does not need this setting.
 
-### Part 2 of 2: Enable the extension in Safari (about 5 minutes)
+The install script keeps exactly one copy of the app. macOS registers every app that Xcode builds, and Safari shows one **Your Edition** for each copy that it finds. So the script builds in a temporary folder, copies the app to `~/Applications`, then deletes the build copy. It also deletes an old `Morning Tab.app`, the name of this project before version 0.2.
 
-1. Open **Safari → Settings → Advanced**. Select **Show features for web developers**.
-2. Open **Develop → Developer Settings…**. Select **Allow unsigned extensions**. If you signed and notarized the app (see above), skip this step.
-3. Open **Settings → Extensions**. Enable **Your Edition**. Click **Always Allow on Every Website…**. Your Edition needs this access to reach your model provider and to read your pages.
-4. Open **Settings → General**. Set **New tabs open with** to **Your Edition**.
-
-> Safari clears **Allow unsigned extensions** each time Safari quits. After a restart, do step 2 again. A signed and notarized app does not need this setting.
+To sign and notarize your own builds, see [Sign your own builds](#sign-your-own-builds-optional).
 
 ### If something goes wrong
 
 | Problem | Cause | Fix |
 | --- | --- | --- |
-| **Your Edition** is not in the extension list | **Allow unsigned extensions** is off. Safari turns it off each time Safari quits or crashes. | Open **Develop → Developer Settings…** and select **Allow unsigned extensions** again. If it is still missing, quit Safari (⌘Q), open it, and do that step again. |
-| Safari crashes during an install | Safari 27 crashes when it loads a replaced extension and adds its toolbar button again. This is a bug in Safari. | Quit Safari before you run `install:safari`. The command now asks you to do this. |
-| **Your Edition** shows 2 or more times | macOS has more than one copy of the app, for example from **Run** in Xcode | Run `npx pnpm@10.11.1 install:safari`. Then delete any other copy of `Your Edition.app`. |
-| "Connection error." or "has no website access" | Safari has not given Your Edition website access. Your Edition needs it to reach your model provider and to read pages. | Click **Build today's homepage** and allow access in the prompt. Or open **Settings → Extensions → Your Edition** and click **Always Allow on Every Website…**. |
+| **Your Edition** is not in the extension list | The app was not opened one time. Or, for your own build, **Allow unsigned extensions** is off. | Open **Your Edition.app**. For your own build, select **Allow unsigned extensions** again. |
+| **Your Edition** shows 2 or more times | macOS has more than one copy of the app, for example from **Run** in Xcode | Delete every copy except the one in Applications. To find them, run the command below. |
+| "Connection error." or "has no website access" | Safari has not given Your Edition website access | Click **Build today's edition** and allow access in the prompt. Or open **Settings → Extensions → Your Edition** and click **Always Allow on Every Website…**. |
 | The privacy filter status says "not available" | Apple Intelligence is off or still downloading | See [The on-device privacy filter](#the-on-device-privacy-filter-optional). |
+| Safari crashes during an install | Safari 27 crashes when it loads a replaced extension while it runs. This is a bug in Safari. | Quit Safari before you run `install:safari`. The command asks you to do this. |
 
 To find every copy that macOS knows about, run this command:
 
@@ -83,19 +91,18 @@ To find every copy that macOS knows about, run this command:
 /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -dump | grep "^path:.*Your Edition"
 ```
 
-## Build your first homepage
+## Build your first edition
 
 1. Open a new tab.
 2. Choose **Anthropic (Claude)** or **BharatCode**, and paste that provider's API key. For BharatCode, also choose the model: **qwen-3.8-27b** or **deepseek-v4.1-flash**. Click **Save key**.
-3. The next screen shows your provider, for example "Provider: BharatCode, qwen-3.8-27b". To change the provider, the model or the key, click **Change** or **⚙️ Settings**.
-4. Optional: select **On-device privacy filter**. Do this before the first build if you want no page content to leave your Mac. The status line shows if Apple Intelligence is ready.
-5. Click **Build today's homepage**.
+3. Optional: select **On-device privacy filter**. Do this before the first build if you want no page content to leave your Mac. The status line shows if Apple Intelligence is ready.
+4. Click **Build today's edition**.
 
-The first build takes a few minutes. The progress view shows each step as the agent works.
+The first build takes 3 to 5 minutes, or longer with the privacy filter. The progress view shows each step as the agent works.
 
-**Keep a Your Edition tab open until the build finishes.** The build runs in the extension's background worker, and any new tab shows it. But Safari can stop that worker when no Your Edition tab is open. When the worker wakes, an Anthropic build resumes, and a BharatCode build starts again (at most 3 times). Both reuse the pages, and the privacy-filter summaries, from the last 2 hours.
+**Keep a Your Edition tab open until the build finishes.** Safari can stop the extension's background work when no Your Edition tab is open. If Safari stops it, the build continues when the extension wakes, at most 3 times. It reuses the pages, and the privacy-filter summaries, from the last 2 hours.
 
-> **Your first homepage is thin.** Safari has no history for the agent to read (see below). To fix this now, [import your Safari history](#improve-this-tab-import-your-safari-history). Otherwise, the homepage gets better over the first few days.
+> **Your first edition is thin.** Safari has no history for the agent to read (see below). To fix this now, [import your Safari history](#improve-this-tab-import-your-safari-history). Otherwise, the page gets better over the first few days.
 
 ## What leaves your Mac
 
@@ -110,21 +117,21 @@ Safari loads those pages with your sign-ins, so they can contain private content
 
 ### The on-device privacy filter (optional)
 
-The privacy filter is the main difference from the original extension. It is off by default. You can turn it on before your first build, on the **Build your homepage** screen. After that, open **⚙️ Settings** and select **On-device privacy filter**.
+The privacy filter is the main difference from the original extension. It is off by default. Turn it on before your first build, on the **Build your first edition** screen. After that, open **⚙️ Settings** and select **On-device privacy filter**.
 
 | | Filter off (default) | Filter on |
 | --- | --- | --- |
-| What goes to the model provider for each page | The cleaned HTML of the page | A list of items: a title, one sentence and the page's own link for each |
+| What goes to the provider for each page | The cleaned HTML of the page | A list of items: a title, one sentence and the page's own link for each |
 | Who reads the full page | The provider's model | Apple Intelligence, on your Mac |
 | Personal details | The agent has an instruction to skip them | The on-device model leaves them out. Then a pattern check replaces emails, phone numbers and long numbers, such as card numbers, with a placeholder. |
-| Page titles in the history summary | Sent as they are | Sent after the same pattern check |
+| Page titles in the site summary | Sent as they are | Sent after the same pattern check |
 | If Apple Intelligence is not ready | Not needed | The page is not sent. The build continues with the other data. |
-| Needs | Nothing extra | A Mac with Apple silicon, macOS 26 or later, and Apple Intelligence turned on |
+| Needs | Nothing extra | A Mac with Apple silicon and Apple Intelligence turned on |
 
 How it works:
 
 1. The extension turns each page into plain text, with a number such as `[3]` for each link.
-2. Your Edition app gives the text to Apple's on-device model (the Foundation Models framework). The code is in [`PrivacyFilter.swift`](apps/safari/Morning%20Tab/Morning%20Tab%20Extension/PrivacyFilter.swift).
+2. The Your Edition app gives the text to Apple's on-device model (the Foundation Models framework). The code is in [`PrivacyFilter.swift`](apps/safari/Your%20Edition/Your%20Edition%20Extension/PrivacyFilter.swift).
 3. The model returns items with link numbers only. It never writes a URL.
 4. The extension keeps only items whose number is a real link on the page. It builds the list from those links. The code is in [`privacy-digest.ts`](apps/extension/lib/privacy-digest.ts).
 
@@ -134,19 +141,13 @@ To turn on Apple Intelligence:
 2. Turn on **Apple Intelligence**. Make sure that the Siri language is the same as your Mac language.
 3. Wait for the download to finish. Keep the Mac on Wi-Fi and power. The download can take 15 to 60 minutes.
 
-**Settings** shows the status of the on-device model under the filter option.
+**The filter is slow.** Apple's on-device model reads each page in up to 3 parts, one part at a time. One part takes 10 to 30 seconds, so the filter adds up to 1.5 minutes for each page. The activity log shows each part, for example "Privacy filter: page 2 of 3, part 1 of 3". If the on-device model does not answer within 2 minutes, Your Edition does not send that page and continues with the others.
 
-**The filter is slow.** Apple's on-device model reads each page in up to 3 parts, one part at a time. One part takes 10 to 30 seconds, so the filter adds up to 1.5 minutes for each page. During this time, the build stays on **Opening pages in your browser**. The activity log shows each part, for example "Privacy filter: page 2 of 3, part 1 of 3". If the on-device model does not answer within 2 minutes, Your Edition does not send that page and continues with the others.
-
-Safari can stop an extension's background work when it looks idle, and a long wait for the on-device model looks idle. To prevent this, an open Your Edition tab sends the background a short message every 10 seconds during a build. If Safari stops it anyway, the next build continues where it stopped. Your Edition keeps the filter's summaries for 2 hours, so the filter does not run on those pages again.
-
-The filter is a strong extra protection, not a guarantee. The on-device model can miss a personal detail. The pattern check catches only fixed formats. Use **Sites the agent never reads** for sites that you never want opened.
-
-Your API keys, the visit log and the page cache stay in the extension's local storage on your Mac. Safari does not sync them. The page cache holds the cleaned pages from the last 2 hours, so a restarted build does not open them again. For more detail, read [ARCHITECTURE.md](./ARCHITECTURE.md#privacy).
+The filter can miss a personal detail, and the pattern check catches only fixed formats. Use **Sites the agent never reads** for sites that you never want opened.
 
 ## Model providers
 
-Your Edition can use 2 kinds of provider. Select one in **⚙️ Settings → Model provider**.
+Your Edition can use 2 kinds of provider. Select one in **⚙️ Settings → Model provider**, then click **Save provider**.
 
 | | Anthropic (Claude), the default | BharatCode |
 | --- | --- | --- |
@@ -154,10 +155,10 @@ Your Edition can use 2 kinds of provider. Select one in **⚙️ Settings → Mo
 | Cost | Pay for each build, by tokens | A flat monthly fee: ₹399 (Qwen only) or ₹999 (both models) |
 | How the agent runs | Claude Managed Agents: a session with a sandbox for the pages | A chat loop in the extension. The extension holds the pages in memory and answers the agent's file tools itself. |
 | What happens to your data | Your Edition deletes the session and the uploaded pages after each build | BharatCode sends prompts to inference partners, some outside India. The Free and Lite plans may keep logs. See its [privacy policy](https://bharatcode.ai/privacy). |
-| Homepage quality | Best | Can be weaker, because the models are smaller |
-| Resume an interrupted build | Yes | No. Start a new build. |
+| Page quality | Usually higher, because the model is larger | Can be weaker |
+| Interrupted build | Resumes from the saved session. The new tab shows **Resume interrupted build**. | Starts again, with the pages from the cache |
 
-**Your choice sticks.** Your Edition uses only the provider that you select. It never switches to the other one by itself. If an Anthropic build was interrupted and you then select BharatCode, Your Edition does not resume the Anthropic build. It deletes that session and the pages uploaded to it.
+**Your choice sticks.** Your Edition uses only the provider that you select. It never switches to the other one by itself. If an Anthropic build was interrupted and you then select BharatCode, Your Edition deletes that session and the pages uploaded to it.
 
 **If you choose BharatCode, turn on the on-device privacy filter.** Then only short summaries of each page leave your Mac.
 
@@ -173,10 +174,9 @@ Your Edition can use 2 kinds of provider. Select one in **⚙️ Settings → Mo
 | --- | --- | --- |
 | Extension can read your past history | Yes, with the `history` permission | No. The `history` API does not exist in Safari. |
 | What the agent ranks | Your real Chrome history (14 days by default) | Your Edition's own visit log (up to 30 days) |
-| First homepage | Full, from day one | Thin. It gets better over the first few days. |
+| First edition | Full, from day one | Thin. It gets better over the first few days. |
 | Notification when a background build fails | Yes | No. The error shows in your next new tab. |
-| Install | Load the folder in `chrome://extensions` | Build a Mac app in Xcode. The app contains the extension. |
-| Unsigned extension | Works in Developer mode | Needs **Allow unsigned extensions**. Safari clears it each time Safari quits. A signed and notarized build does not need it. |
+| Install | Load the folder in `chrome://extensions` | Open the notarized app from a release, or build it in Xcode |
 | On-device privacy filter | Not available | Optional. Uses Apple Intelligence on your Mac. |
 
 ### Why Your Edition cannot read your Safari history
@@ -198,7 +198,7 @@ You can give Your Edition your Safari history from before the install. The **Imp
 - Your Edition reads only `History.json` from the file. It never opens passwords or the other files in a Safari export.
 - It keeps visits from the last 30 days, in the visit log on your Mac.
 - Apple does not document this file format. Your Edition reads the fields that Chromium's Safari importer also reads: `url`, `title`, `time_usec` and `visit_count`.
-- It also reads a Chrome history file from Google Takeout.
+- It also reads a Chrome history file from Google Takeout, and visit logs that Morning Tab (the old name) exported.
 
 **Export my visit log** saves the visit log as a JSON file. You can import that file again later, for example on another Mac.
 
@@ -208,22 +208,20 @@ Your Edition records the pages you load in Safari from the day you install it. T
 
 | The log does this | The log does not do this |
 | --- | --- |
-| Starts from the tabs you have open at install | Read the history Safari had before the install |
+| Starts from the tabs that are open at install | Read the history Safari had before the install |
 | Counts each page you load | Count pages in private windows |
 | Deletes entries older than 30 days | Count the pages that Your Edition opens for a build |
 | Stays in the extension's storage on your Mac | Sync to iCloud or to other devices |
 
 For the first 3 days, the agent counts every site in the log, even sites with only one visit. After that, the agent ignores sites with fewer than 2 visits, the same as on Chrome.
 
-### One more difference
-
 To read pages, Your Edition opens a separate window. Chrome keeps that window behind your work. Safari can show it in front.
 
 ## Make it yours
 
-**The default look** is a broadsheet front page, like the image at the top of this page. It has a "Your Edition" masthead, cream paper and thin rules. It also has a lead story with a drop cap, and boxed side columns. It uses fonts that every Mac has: Bodoni 72 and Didot for headlines, Iowan Old Style for text. Your Edition loads no web fonts, so opening a tab sends no request to a font service. To get a different look, describe it in **Instructions** (below).
+**The default look** is a broadsheet front page, like the image at the top of this page. It has a "Your Edition" masthead, cream paper, thin rules, a lead story with a drop cap, and boxed side columns. The dateline names the edition that you read: morning, afternoon, evening or night. Headlines use Bodoni 72 and Didot. Text uses Iowan Old Style. To get a different look, describe it in **Instructions** (below).
 
-Click **⚙️ Settings** on the new tab. It is also on the first-build screen, before your first homepage exists. There are 5 settings.
+Click **⚙️ Settings** on the new tab. It is also on the first-build screen. There are 5 settings.
 
 **1. Instructions.** The agent uses your instructions in every build. Your instructions have priority over the agent's defaults. They control the content and the look.
 
@@ -244,49 +242,39 @@ Click **Save & rebuild** to use them now.
 - If a page redirects to a blocked host, the extension drops the page before upload.
 - The extension always blocks local network addresses: localhost, private IPs, and `.local` and `.internal` hosts.
 
-**3. Model provider.** Select **Anthropic (Claude)** or **BharatCode or another OpenAI-compatible API**. See [Model providers](#model-providers).
-
-| Provider | What you enter |
-| --- | --- |
-| Anthropic | Only your **Anthropic API key**. Your Edition always uses Claude Sonnet 5.5. |
-| BharatCode | Your BharatCode API key and the model: **qwen-3.8-27b** (default) or **deepseek-v4.1-flash** (needs the Pro plan). |
+**3. Model provider.** Select **Anthropic (Claude)** or **BharatCode or another OpenAI-compatible API**. Enter the key, then click **Save provider**. See [Model providers](#model-providers).
 
 - If no build is running, the new choice applies from your next build.
-- If a build is running, Your Edition restarts it with the new provider or key. Pages read in the last 2 hours come from the page cache, so the restart does not open them again. Only the model's work starts over.
+- If a build is running, **Save provider** restarts it with the new provider or key. Pages read in the last 2 hours come from the cache, so only the model's work starts over.
 
 **4. Rebuild automatically each morning.** This setting is on by default.
 
-- The extension builds one homepage each day, in the background.
+- The extension builds one edition each day, in the background.
 - It builds the first time Safari is open between 5 AM and noon. If Safari is not open that morning, it skips that day.
 - It starts only after your first manual build. It tries one time each morning at most.
 
-**5. On-device privacy filter.** This setting is off by default. When it is on, Apple Intelligence on your Mac summarizes each page first, and only the summaries go to your model provider. See [The on-device privacy filter](#the-on-device-privacy-filter-optional).
+**5. On-device privacy filter.** This setting is off by default. See [The on-device privacy filter](#the-on-device-privacy-filter-optional).
 
 To rebuild now, click **↻ Rebuild** at the top right.
 
 ## Good to know
 
-- **Cost.** Your API key pays for each build. The cost depends on the provider and on the quantity of text the agent reads. BharatCode charges a flat monthly fee instead. To build only when you ask, disable automatic rebuilds.
-- **What the agent reads.** The agent ranks the sites you visit and opens up to 8 of them in each build. It skips search engines, webmail, banking and logged-out marketing pages. If it cannot open a page, it reports the failure.
+- **Cost.** With Anthropic, your key pays for each build. The cost depends on the quantity of text that the agent reads. BharatCode charges a flat monthly fee instead. To build only when you ask, turn off automatic rebuilds.
+- **What the agent reads.** The agent ranks the sites you visit and opens up to 8 of them in each build. It skips search engines, webmail, banking and logged-out marketing pages.
 - **Links are real.** Each link on your page comes from a page that the agent read. The agent has an instruction to never invent a URL.
-- **Interrupted builds.** If Safari closes during an Anthropic build, the next new tab shows **Resume interrupted build**. A BharatCode build cannot resume. Click **Build today's homepage** again.
-- **Updates.** After you pull new code, run `npx pnpm@10.11.1 install:safari`.
+- **Updates.** Download the new release and replace the app. If you build it yourself, pull the new code and run `npx pnpm@10.11.1 install:safari`.
 
 ## How it works
 
-With Anthropic, these steps run in a Claude Managed Agents session. With BharatCode, they run in a chat loop inside the extension, with the same tools and the same safety checks.
-
 1. **`getHistory`**: the agent gets a ranked summary of the domains you visit most.
-2. **`getPageHtml`**: the agent selects up to 8 pages. The extension opens them in a background window and cleans them. If the privacy filter is on, the extension replaces each page with its on-device summary. Then it gives the pages to the agent as files.
-3. **`grep` / `read`**: the agent finds headlines, posts and links in those files.
-4. **`write`**: the agent writes one React component. The new tab shows it.
+2. **`getPageHtml`**: the agent selects up to 8 pages. The extension opens them in a background window and cleans them. If the privacy filter is on, the extension replaces each page with its on-device summary.
+3. **`grep` / `read`**: the agent finds headlines, posts and links in those pages.
+4. **`write`**: the agent writes one React component. The new tab shows it in a sandboxed frame.
 
-There is no Your Edition server. The extension's background worker talks to the provider directly. The two custom tools (`getHistory` and `getPageHtml`) always run in the extension, because they need the visit log and Safari's tabs.
+The 2 browser tools (`getHistory` and `getPageHtml`) always run in the extension, because they need the visit log and Safari's tabs.
 
 - **Anthropic:** the file tools run in the [Claude Managed Agents](https://docs.claude.com) sandbox. The sandbox has no shell access, because scraped pages are untrusted input.
-- **BharatCode:** the extension keeps the pages in memory and answers the file tools itself.
-
-The default look comes from a house style that Your Edition adds to each build request. Your **Instructions** replace it.
+- **BharatCode:** the extension keeps the pages in memory and answers the file tools itself. After the model reads a long result, later requests send a short note in its place, so each request stays small.
 
 For the event flow, the layout and known issues, read **[ARCHITECTURE.md](./ARCHITECTURE.md)**.
 
@@ -313,25 +301,70 @@ pnpm agent:verify        # check that the output renders
 
 **Chrome.** The Chrome build still works and reads Chrome's real history. Run `npx pnpm@10.11.1 build`. In `chrome://extensions`, enable **Developer mode**, click **Load unpacked** and select `apps/extension/.output/chrome-mv3`.
 
+### Sign your own builds (optional)
+
+With a **Developer ID Application** certificate, `install:safari` can sign the app and have Apple notarize it. Then Safari does not need **Allow unsigned extensions**.
+
+1. Copy `signing.local.env.example` to `signing.local.env`.
+2. Run `security find-identity -v -p codesigning`. Copy the SHA-1 hash of your **Developer ID Application** certificate into `SIGN_IDENTITY`. Copy the team ID (the code in brackets) into `TEAM_ID`.
+3. Make an app-specific password at [account.apple.com](https://account.apple.com) (**Sign-In and Security → App-Specific Passwords**).
+4. Store it in your keychain with the command below. Then set `NOTARY_PROFILE=your-edition-notary` in `signing.local.env`.
+   `xcrun notarytool store-credentials your-edition-notary --apple-id YOUR_APPLE_ID --team-id YOUR_TEAM_ID`
+5. Quit Safari. Run `npx pnpm@10.11.1 install:safari` again. Notarization adds 2 to 5 minutes.
+
+Git ignores `signing.local.env`, so your certificate details stay on your Mac. The password stays in your keychain. The script uses only the profile name.
+
 ## Releases
 
 Each push to `main` makes a new release automatically. The workflow is [`release.yml`](.github/workflows/release.yml).
 
-1. GitHub tags the next patch version, for example `v0.1.0`, then `v0.1.1`.
-2. It builds the Safari and Chrome bundles on a standard Ubuntu runner.
-3. It publishes a [GitHub release](https://github.com/nijanthan-dev/your-edition-safari-new-tab/releases) with the 2 zip files and a `SHA256SUMS.txt` file.
+1. It tags the next patch version, for example `v0.2.0`, then `v0.2.1`.
+2. On a GitHub macOS runner, it builds the app, signs it with a Developer ID certificate and has Apple notarize it.
+3. It builds the Safari and Chrome bundles.
+4. It publishes a [GitHub release](https://github.com/nijanthan-dev/your-edition-safari-new-tab/releases) with the Mac app, the 2 bundles and a `SHA256SUMS.txt` file.
+
+GitHub gives public repositories free minutes on its runners, so a release costs nothing.
 
 | To do this | Do this |
 | --- | --- |
-| Release a new minor or major version | Set `version` in `apps/extension/package.json` above the latest tag, for example `0.2.0`. Then push. |
+| Release a new minor or major version | Set `version` in `apps/extension/package.json` above the latest tag, for example `0.3.0`. Then push. |
 | Push without a release | Change only Markdown files or `docs/`. These pushes do not release. |
 | Release again without a change | Run the **Release** workflow by hand on the **Actions** tab. |
 
-The release does not contain the Mac app. To get the app, run `install:safari` (see [Install](#install)).
+### Signing secrets (for the maintainer)
+
+The certificate and the notary key are GitHub **encrypted secrets** in an environment named `release`. Nobody can read them from the repository, the logs or the release.
+
+- GitHub hides secret values in logs.
+- Workflows from fork pull requests do not get them.
+- The job puts the certificate in a temporary keychain and deletes it when the job ends.
+- The job uses only GitHub's own actions and Apple's tools.
+
+Without these secrets, the release has no Mac app. Everything else still releases. To set them up (about 20 minutes):
+
+1. In App Store Connect, open **Users and Access → Integrations → App Store Connect API**. Make a **Team key** with the **Developer** role. Download the `.p8` file. Note the key ID and the issuer ID.
+2. In Keychain Access, export your **Developer ID Application** certificate with its private key as a `.p12` file. Give it a password.
+3. In the repository, open **Settings → Environments**. Make an environment named `release`, and limit it to the `main` branch.
+4. Add the secrets in the table below to the `release` environment.
+5. Delete the `.p12` and `.p8` files from your Mac, or keep them in a safe place.
+
+| Secret | Value |
+| --- | --- |
+| `MACOS_CERT_P12_BASE64` | The output of `base64 -i cert.p12` |
+| `MACOS_CERT_PASSWORD` | The password of the `.p12` file |
+| `MACOS_SIGN_IDENTITY` | The SHA-1 hash of the certificate |
+| `APPLE_TEAM_ID` | Your team ID |
+| `ASC_API_KEY_P8_BASE64` | The output of `base64 -i AuthKey_XXXX.p8` |
+| `ASC_KEY_ID` | The key ID |
+| `ASC_ISSUER_ID` | The issuer ID |
+
+If a secret leaks, revoke the API key in App Store Connect. For the certificate, ask Apple to revoke it in your developer account.
+
+Anyone with write access to the repository can change the workflow and read the secrets. Give write access only to people that you trust.
 
 ## Status
 
-Your Edition is early and experimental. It is a tool that you run yourself, with your own key.
+Your Edition is early and experimental. It is a tool that you run with your own key.
 
 Do not publish it to a store in its current form. Any person with access to your browser profile can read the stored API key.
 

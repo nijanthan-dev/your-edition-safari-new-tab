@@ -10,4 +10,5 @@ of the history API, Safari-specific manifest permissions, guards for APIs
 Safari lacks), the Xcode project in apps/safari, an install script, an optional
 on-device privacy filter (Apple Foundation Models), import and export of
 browsing history, an OpenAI-compatible provider option (BharatCode), a default
-broadsheet house style, and the new name.
+broadsheet house style, a signed and notarized release build, and the new
+name (Your Edition, called Morning Tab before version 0.2).

@@ -155,10 +155,10 @@ export default function App() {
   if (!renderedCode) {
     return (
       <div style={{ maxWidth: 560, margin: "14vh auto", padding: 24, fontFamily: "system-ui" }}>
-        <h1 style={{ fontSize: 26 }}>Build your homepage</h1>
+        <h1 style={{ fontSize: 26 }}>Build your first edition</h1>
         <p style={{ color: "#555", lineHeight: 1.6 }}>
-          The agent reads your browsing history, opens the pages you actually follow, and writes a
-          homepage from what it finds today.
+          The agent reads the sites you visit, opens the pages you actually follow, and writes a
+          front page from what it finds today.
         </p>
         <p style={{ color: "#333", fontSize: 14, margin: "12px 0 0" }}>
           Provider: {providerLabel}.{" "}
@@ -176,7 +176,7 @@ export default function App() {
         )}
         <div style={{ display: "flex", gap: 12, marginTop: 16 }}>
           <button style={btn} onClick={() => build()}>
-            Build today&apos;s homepage
+            Build today&apos;s edition
           </button>
           <button style={btnSecondary} onClick={() => setShowSettings(true)}>
             ⚙️ Settings
