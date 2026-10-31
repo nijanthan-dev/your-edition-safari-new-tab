@@ -86,7 +86,7 @@ export type BuildMsg =
   | { kind: "phase"; phase: RunPhase; stepIndex: number; detail: string }
   | { kind: "text"; chunk: string } // narration delta
   | { kind: "log"; line: string }
-  | { kind: "done"; code: string } // homepage saved; carries the raw TSX
+  | { kind: "done"; code: string } // edition saved; carries its HTML
   | { kind: "error"; message: string };
 
 /**

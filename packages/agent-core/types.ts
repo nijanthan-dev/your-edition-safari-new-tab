@@ -117,6 +117,7 @@ export interface RunCallbacks {
 export interface HomepageBuildResult {
   code: string;
   sessionId: string;
-  /** Where the code came from: a session output file, or a fenced block in the final message. */
+  /** The finished page's HTML. */
+  /** Where the page came from: a session output file, or a fenced block in the final message. */
   source: "session-output" | "message-fence";
 }

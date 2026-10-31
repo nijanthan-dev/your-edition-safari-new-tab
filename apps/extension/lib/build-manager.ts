@@ -269,7 +269,7 @@ export class BuildManager {
               callbacks,
             });
 
-      // Persist the raw TSX; the page transpiles it for preview.
+      // Persist the page's HTML; the new tab shows it in a frame that runs no scripts.
       await saveHomepage(result.code);
 
       this.state = { ...this.state, running: false, phase: "done" };

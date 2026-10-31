@@ -9,7 +9,7 @@
  * safety check are the same functions the Anthropic path uses.
  */
 import { slugifyUrl } from "./history-digest";
-import { componentFromMessage, getHistoryDigest, loadAllowedPages, resolveBlockedSites, stripFence, toEmit } from "./orchestrator";
+import { pageFromMessage, getHistoryDigest, loadAllowedPages, resolveBlockedSites, stripFence, toEmit } from "./orchestrator";
 import { OUTPUT_PATH, buildKickoffMessage, buildSystemPrompt } from "./prompt";
 import { GET_HISTORY_SCHEMA, GET_PAGE_HTML_SCHEMA } from "./schemas";
 import type { BrowserBridge, HomepageBuildResult, RunCallbacks } from "./types";
@@ -214,7 +214,7 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
   ];
 
   const deliverable = () =>
-    (files.get(OUTPUT_PATH) ?? [...files].find(([path]) => /\.(tsx|jsx)$/.test(path))?.[1])?.text;
+    (files.get(OUTPUT_PATH) ?? [...files].find(([path]) => /\.html?$/.test(path))?.[1])?.text;
 
   let lastText = "";
   let nudges = 0;
@@ -249,7 +249,7 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
     nudges++;
     messages.push({
       role: "user",
-      content: `You have not written the homepage yet. Call the write tool with path ${OUTPUT_PATH} and the full component.`,
+      content: `You have not written the homepage yet. Call the write tool with path ${OUTPUT_PATH} and the full HTML page.`,
     });
   }
 
@@ -259,7 +259,7 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
     emit.phase("done");
     return { code: stripFence(written), sessionId: "", source: "session-output" };
   }
-  const inline = componentFromMessage(lastText);
+  const inline = pageFromMessage(lastText);
   if (inline) {
     emit.log("deliverable recovered from message fence");
     return { code: inline, sessionId: "", source: "message-fence" };
@@ -269,7 +269,7 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
 
 /**
  * Shorten what the model has already answered: long tool results, and the full
- * component in an earlier write call. Short notes say where the text still is.
+ * page in an earlier write call. Short notes say where the text still is.
  */
 export function shrinkSeen(messages: ChatMessage[]): void {
   const toolNames = new Map<string, string>();

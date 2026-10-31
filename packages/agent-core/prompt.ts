@@ -1,4 +1,4 @@
-export const OUTPUT_PATH = "/mnt/session/outputs/homepage.tsx";
+export const OUTPUT_PATH = "/mnt/session/outputs/homepage.html";
 
 /**
  * Where the agent's files live. "sandbox": Managed Agents mounts the pages into
@@ -44,7 +44,10 @@ const STEP_3: Record<ToolEnvironment, string> = {
 
 /**
  * One system prompt for the whole build: choose pages, extract items, write the
- * component. A single agent is enough — extraction only needs `read`/`grep`.
+ * page. A single agent is enough — extraction only needs `read`/`grep`.
+ *
+ * The deliverable is one static HTML document, not code. The new tab shows it in
+ * a frame that runs no scripts, so nothing the model writes can execute.
  */
 export function buildSystemPrompt(tools: ToolEnvironment): string {
   return `You build a personalized browser homepage from the user's own browsing history.
@@ -79,17 +82,21 @@ ${STEP_3[tools]}
    A page that failed with reason "blocked by the user's settings" must not be requested again or worked around.
    Work with what came back; do not silently pretend a failed page succeeded.
 
-6. Write a single React component to ${OUTPUT_PATH} using the write tool.
+6. Write a single HTML document to ${OUTPUT_PATH} using the write tool.
 
-## The component contract
+## The page contract
 
-- One functional component named PersonalizedHomepage, \`export default\`.
-- \`import React from 'react'\` at the top. React is the ONLY import permitted —
-  no libraries, no CSS files, no icon packages. It is rendered standalone.
-- Inline styles or a style object. No styled-components, no Tailwind, no
-  external stylesheet.
-- Every link must be a real absolute URL taken from the scraped content. Never
-  invent a URL, never leave an \`href="#"\` placeholder.
+- One complete, static HTML document: \`<!doctype html>\`, \`<html>\`, a \`<head>\`
+  with \`<meta charset="utf-8">\` and one \`<style>\` element, then \`<body>\`.
+- No JavaScript at all: no \`<script>\`, no \`on…=\` attributes, no
+  \`javascript:\` links. The page is shown in a frame that runs no scripts, so
+  any script is ignored. Use CSS for hover states, and \`<details>\` /
+  \`<summary>\` for anything that expands.
+- No external files: no stylesheets, fonts or scripts from other sites. All CSS
+  goes in the one \`<style>\` element or in \`style\` attributes. Images may use
+  https URLs taken from the scraped content.
+- Every link must be a real absolute https URL taken from the scraped content.
+  Never invent a URL, never leave an \`href="#"\` placeholder.
 - Responsive, works dark or light, hover states and transitions where they help.
 - Emoji are fine as category markers; icon libraries are not.
 
@@ -103,7 +110,7 @@ noticed. Be opinionated. A homepage that looks like every other homepage has
 failed at its only job.
 
 When you have written the file, reply with a two-sentence summary of what you
-built and why. Do not paste the component source into your reply.`;
+built and why. Do not paste the HTML into your reply.`;
 }
 
 export const HOMEPAGE_SYSTEM_PROMPT = buildSystemPrompt("sandbox");

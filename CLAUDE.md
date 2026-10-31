@@ -22,6 +22,7 @@ The user's browsing history and personal data must never leave their Mac through
 3. Commit with the repo-local git identity. Never set a personal email in git config.
 4. Never put API keys, certificates or notary credentials in code, docs, logs or commit messages.
 5. Never weaken the privacy filter's fail-closed rule, the blocked-sites list or the private-address check.
+6. The edition is static HTML in a frame with no `allow-scripts` and no `allow-same-origin` (`EditionFrame.tsx`, `lib/edition.ts`). Never run model-written code, and never load the edition from a third-party server.
 
 ## Safari and the installed app
 

@@ -447,18 +447,18 @@ export async function loadAllowedPages(
 // deliverable retrieval
 // ---------------------------------------------------------------------------
 
-const CODE_FENCE = /```(?:tsx|jsx|ts|js|typescript|javascript)?\s*\n([\s\S]*?)```/;
+const CODE_FENCE = /```(?:html|htm)?\s*\n([\s\S]*?)```/;
 
-/** Strip a ```tsx fence, if the model wrapped the file contents in one. */
+/** Strip a ```html fence, if the model wrapped the file contents in one. */
 export function stripFence(text: string): string {
   const fenced = text.match(CODE_FENCE);
   return (fenced ? fenced[1] : text).trim();
 }
 
-/** The component, when the model answered with it inline instead of writing it. */
-export function componentFromMessage(text: string): string | null {
+/** The page, when the model answered with it inline instead of writing it. */
+export function pageFromMessage(text: string): string | null {
   const fenced = text.match(CODE_FENCE);
-  return fenced && fenced[1].includes("PersonalizedHomepage") ? fenced[1].trim() : null;
+  return fenced && /<(?:!doctype html|html|body)\b/i.test(fenced[1]) ? fenced[1].trim() : null;
 }
 
 /** Callbacks → the emitter both runners use. */
@@ -486,7 +486,7 @@ async function collectDeliverable(
         scope_id: sessionId,
         betas: [MANAGED_AGENTS_BETA],
       })) {
-        if (!/\.(tsx|jsx|ts|js)$/.test(file.filename)) continue;
+        if (!/\.html?$/.test(file.filename)) continue;
         const response = await client.beta.files.download(file.id);
         const text = await response.text();
         if (text.trim()) {
@@ -500,9 +500,9 @@ async function collectDeliverable(
     await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
   }
 
-  // Fallback: the model sometimes answers with the component inline instead of
+  // Fallback: the model sometimes answers with the page inline instead of
   // (or as well as) writing it. Better than failing the run outright.
-  const inline = componentFromMessage(finalMessage);
+  const inline = pageFromMessage(finalMessage);
   if (inline) {
     emit.log("deliverable recovered from message fence");
     return { code: inline, source: "message-fence" };

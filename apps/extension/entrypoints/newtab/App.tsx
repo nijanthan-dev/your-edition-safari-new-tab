@@ -2,10 +2,10 @@ import { useCallback, useEffect, useState } from "react";
 import { BHARATCODE, DEFAULT_BLOCKED_SITES } from "@homepage/agent-core";
 import { BUILD_STEPS } from "@/lib/protocol";
 import { KEYS, extensionStore, hasProviderKey, loadHomepage, loadSettings, saveProviderConfig, saveSetting, type Provider, type Settings } from "@/lib/storage";
-import { toRenderable } from "@/lib/transpile";
+import { isEditionHtml } from "@/lib/edition";
 import { ApiKeySetup } from "./components/ApiKeySetup";
 import { BuildProgress } from "./components/BuildProgress";
-import { HomepagePreview } from "./components/HomepagePreview";
+import { EditionFrame } from "./components/EditionFrame";
 import { ImproveTabPanel } from "./components/ImproveTabPanel";
 import { PrivacyFilterOption } from "./components/PrivacyFilterOption";
 import { SettingsModal } from "./components/SettingsModal";
@@ -35,8 +35,10 @@ export default function App() {
   const [privacyFilter, setPrivacyFilter] = useState(false);
   /** Shown on the first-build screen, e.g. "BharatCode, qwen-3.8-27b". Refreshed when Settings closes. */
   const [providerLabel, setProviderLabel] = useState("");
-  /** Transpiled homepage, ready for Sandpack. */
+  /** The saved edition's HTML. */
   const [renderedCode, setRenderedCode] = useState<string | null>(null);
+  /** The saved edition is React code from before version 0.3, so it needs one rebuild. */
+  const [oldFormat, setOldFormat] = useState(false);
   /** A session left mid-flight, offered as "Resume interrupted build". */
   const [resumable, setResumable] = useState<string | null>(null);
   const [showSettings, setShowSettings] = useState(false);
@@ -45,7 +47,7 @@ export default function App() {
   /** The error the user dismissed, so a stale banner doesn't linger. */
   const [dismissedError, setDismissedError] = useState<string | null>(null);
 
-  const { state, build, cancel } = useHomepageBuild((code) => setRenderedCode(toRenderable(code)));
+  const { state, build, cancel } = useHomepageBuild((code) => setRenderedCode(code));
 
   /** The provider line, the key gate and the resume offer all follow the saved provider. */
   const applyProvider = useCallback((settings: Settings, activeSession?: string) => {
@@ -84,7 +86,8 @@ export default function App() {
         setBlockedSites(settings.blockedSites);
         setAutoRebuild(settings.autoRebuild);
         setPrivacyFilter(settings.privacyFilter);
-        if (homepage?.code) setRenderedCode(toRenderable(homepage.code));
+        if (homepage?.code && isEditionHtml(homepage.code)) setRenderedCode(homepage.code);
+        else if (homepage?.code) setOldFormat(true);
       } finally {
         setLoading(false);
       }
@@ -160,7 +163,13 @@ export default function App() {
   if (!renderedCode) {
     return (
       <div style={{ maxWidth: 560, margin: "14vh auto", padding: 24, fontFamily: "system-ui" }}>
-        <h1 style={{ fontSize: 26 }}>Build your first edition</h1>
+        <h1 style={{ fontSize: 26 }}>{oldFormat ? "Build a new edition" : "Build your first edition"}</h1>
+        {oldFormat && (
+          <p style={{ color: "#333", lineHeight: 1.6 }}>
+            Your Edition now builds plain pages that run no code, so nothing on the page reaches
+            another server. Your last edition was made the old way. Build once to see it again.
+          </p>
+        )}
         <p style={{ color: "#555", lineHeight: 1.6 }}>
           The agent reads the sites you visit, opens the pages you actually follow, and writes a
           front page from what it finds today.
@@ -270,7 +279,7 @@ export default function App() {
         </div>
       )}
 
-      <HomepagePreview code={renderedCode} />
+      <EditionFrame html={renderedCode} />
 
       {settingsModal}
     </div>

@@ -54,7 +54,7 @@ function fakeBridge() {
   return { bridge, requested };
 }
 
-const COMPONENT = "import React from 'react';\nexport default function PersonalizedHomepage() { return <div>Hi</div>; }";
+const PAGE = "<!doctype html>\n<html><head><style>body{margin:0}</style></head><body><h1>Hi</h1></body></html>";
 
 describe("runHomepageBuildChat", () => {
   test("runs the tools, keeps blocked URLs out of the browser, and returns the written component", async () => {
@@ -64,7 +64,7 @@ describe("runHomepageBuildChat", () => {
       [{ name: "getPageHtml", args: { urls: ["https://news.example/", "https://mail.google.com/"] } }],
       [{ name: "grep", args: { pattern: "big story" } }],
       [{ name: "read", args: { path: "/pages/news_example_0.html" } }],
-      [{ name: "write", args: { path: OUTPUT_PATH, content: "```tsx\n" + COMPONENT + "\n```" } }],
+      [{ name: "write", args: { path: OUTPUT_PATH, content: "```html\n" + PAGE + "\n```" } }],
       "Built a front page from your news site.",
     ]);
     const phases: string[] = [];
@@ -78,7 +78,7 @@ describe("runHomepageBuildChat", () => {
       callbacks: { onPhase: (p) => phases.push(p), onLog: (l) => logs.push(l) },
     });
 
-    expect(result.code).toBe(COMPONENT);
+    expect(result.code).toBe(PAGE);
     expect(requested).toEqual(["https://news.example/"]);
     expect(requests[0].url).toBe("https://bharatcode.ai/api/model/v1/chat/completions");
     expect(requests[0].headers.Authorization).toBe("Bearer test-key");
@@ -114,7 +114,7 @@ describe("runHomepageBuildChat", () => {
     const { bridge } = fakeBridge();
     const { fetchFn, requests } = scriptedModel([
       [{ name: "read", args: { path: "/nope" } }, { name: "launchRocket", args: {} }],
-      [{ name: "write", args: { path: OUTPUT_PATH, content: COMPONENT } }],
+      [{ name: "write", args: { path: OUTPUT_PATH, content: PAGE } }],
       "done",
     ]);
     await runHomepageBuildChat({ baseUrl: "https://x.example/v1", apiKey: "k", model: "m", bridge, fetch: fetchFn });
@@ -144,17 +144,17 @@ describe("shrinkSeen", () => {
       getHistory: async () => ({ sites: [], totalSitesSeen: 0 }),
       getPageHtml: async ({ urls }) => ({ pages: urls.map((url) => ({ url, title: "T", html: big })), failed: [] }),
     };
-    const longComponent = COMPONENT + "\n// " + "x".repeat(3000);
+    const longPage = PAGE + "\n<!-- " + "x".repeat(3000) + " -->";
     const { fetchFn, requests } = scriptedModel([
       [{ name: "getPageHtml", args: { urls: ["https://news.example/"] } }],
       [{ name: "read", args: { path: "/pages/news_example_0.html" } }],
-      [{ name: "write", args: { path: OUTPUT_PATH, content: longComponent } }],
+      [{ name: "write", args: { path: OUTPUT_PATH, content: longPage } }],
       [{ name: "read", args: { path: "/pages/news_example_0.html" } }],
       "done",
     ]);
     const result = await runHomepageBuildChat({ baseUrl: "https://x.example/v1", apiKey: "k", model: "m", bridge, fetch: fetchFn });
 
-    expect(result.code).toBe(longComponent);
+    expect(result.code).toBe(longPage);
     // Request 3 carries the first read in full: the model has not answered it yet.
     const toolText = (n: number) => requests[n].body.messages.filter((m: any) => m.role === "tool").map((m: any) => m.content);
     expect(toolText(2)[1]).toContain("word word");

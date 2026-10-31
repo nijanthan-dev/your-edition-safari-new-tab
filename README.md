@@ -26,6 +26,7 @@ Your Edition replaces the Safari new tab page. An AI agent reads the sites you v
 
 - **No server.** The extension talks to the provider directly. Nothing goes to the author of this fork.
 - **No keys in the code.** Each person enters their own Anthropic or BharatCode key. The key stays in the extension's local storage on that Mac.
+- **No third-party code.** The edition is a plain HTML page in a frame that runs no scripts. A new tab loads only the images that the edition shows, from the sites they came from.
 - **No web fonts.** The default look uses fonts that every Mac has, so opening a tab sends no request to a font service.
 - **No sync.** Safari does not sync the visit log, the keys or the settings to iCloud.
 
@@ -68,6 +69,10 @@ npx pnpm@10.11.1 install && npx pnpm@10.11.1 install:safari
 > Safari clears **Allow unsigned extensions** each time Safari quits. After each restart, do step 2 again, or **Your Edition** disappears from the extension list.
 
 To sign and notarize your own builds with your own Apple Developer ID, see [Sign your own builds](#sign-your-own-builds-optional). Then Safari does not need **Allow unsigned extensions**.
+
+### Update to version 0.3
+
+From version 0.3, the edition is a plain HTML page that runs no code. Your last edition from an older version is React code, so the new tab asks you to build once. Click **Build a new edition**.
 
 ### Upgrade from Morning Tab
 
@@ -274,7 +279,7 @@ To rebuild now, click **↻ Rebuild** at the top right.
 1. **`getHistory`**: the agent gets a ranked summary of the domains you visit most.
 2. **`getPageHtml`**: the agent selects up to 8 pages. The extension opens them in a background window and cleans them. If the privacy filter is on, the extension replaces each page with its on-device summary.
 3. **`grep` / `read`**: the agent finds headlines, posts and links in those pages.
-4. **`write`**: the agent writes one React component. The new tab shows it in a sandboxed frame.
+4. **`write`**: the agent writes one static HTML page. The new tab shows it in a frame that runs no scripts.
 
 The 2 browser tools (`getHistory` and `getPageHtml`) always run in the extension, because they need the visit log and Safari's tabs.
 

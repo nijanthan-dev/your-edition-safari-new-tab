@@ -37,7 +37,7 @@ service worker        Anthropic loop        sandbox
     │                       ├─ grep / read ───▶│
     │◀─ agent.message ──────┤                  │
     │◀─ status_idle ────────┤  end_turn        │
-    ├─ files.list(scope_id) ───────────────────▶  /mnt/session/outputs/homepage.tsx
+    ├─ files.list(scope_id) ───────────────────▶  /mnt/session/outputs/homepage.html
     └─ sessions.delete ────▶│                  │
 ```
 
@@ -69,13 +69,31 @@ build state, then streams phase/text/log deltas. Every open tab shows the same l
 run. A throttled snapshot is also mirrored to storage so a tab opened while the
 worker is asleep paints instantly.
 
-The finished component renders inside a Sandpack iframe
-(`entrypoints/newtab/components/HomepagePreview.tsx`): it is model-written code, so
-it runs sandboxed, not in the extension's own page.
-Sites refuse to load inside that frame, so the frame does not follow links. It
-sends each http(s) link click to the new tab with `postMessage`. The new tab
-checks the sender's origin (`*.codesandbox.io`) and the URL scheme, then opens
-the link in the same tab, or in a new tab for a ⌘-click or middle click.
+### The edition runs no code
+
+The agent writes one static HTML page, not code. The new tab shows it in an
+`<iframe srcdoc>` (`entrypoints/newtab/components/EditionFrame.tsx`) with
+`sandbox="allow-popups allow-popups-to-escape-sandbox allow-top-navigation-by-user-activation"`.
+There is no `allow-scripts` and no `allow-same-origin`, so nothing that the
+model writes can run, read storage or reach the extension.
+
+`lib/edition.ts` adds 3 lines right after the page's doctype:
+
+- A Content-Security-Policy: `default-src 'none'`, inline styles, and images over
+  https or data URLs only. It can only narrow the page. A policy that the model
+  writes cannot widen it.
+- `<base target="_top">`, so a click opens the site in the tab. Sites refuse to
+  load inside a frame. A ⌘-click opens a new tab.
+- `<meta name="referrer" content="no-referrer">`.
+
+A new tab therefore contacts no third party. It loads only the images that the
+edition shows, from the sites they came from.
+
+Why not run a React component, as the original project does? The original
+renders it in Sandpack, which loads its frame from codesandbox.io. Running code
+locally needs a manifest `sandbox` page, and Safari's WebKit does not support that
+manifest key (checked in the WebKit build in macOS 27). Editions from before
+version 0.3 are React code, so the new tab asks for one rebuild.
 
 ## Layout
 
@@ -117,7 +135,7 @@ apps/extension/           MV3 extension (WXT + React)
                           webRequest), and its name and website-access help for messages
     provider-key.ts       the key rule for both providers (no browser APIs, so the harness tests it)
     timeout.ts            withTimeout: one time limit helper for the scraper and native messages
-    transpile.ts          TSX → JS for the preview
+    edition.ts            the frame's policy and link rules, added to the edition's HTML
 
 scripts/install-safari.sh build the app in a temp folder, install one copy in ~/Applications
                           (signs with signing.local.env when present; git ignores that file).
@@ -141,7 +159,7 @@ harness/                  Bun scripts: drive agent-core with a fixture/fetch bri
 |---|---|
 | `pnpm test` | 59 unit tests. They cover the history digest, blocked sites, auto-rebuild and stream reconnect. They also cover the chat loop, the privacy digest, history import and the page caches. The rest cover the prompt, the house style (fonts, dark mode, columns), session discard and shortening seen chat results. |
 | `pnpm agent:run` | Full build against the real API: tools, mounting, sandbox grep/read, deliverable, cleanup |
-| `pnpm agent:verify` | The deliverable transforms, evaluates and server-renders |
+| `pnpm agent:verify` | The deliverable is one static HTML page: no scripts, no external files, real links |
 | `pnpm agent:resume-test` | A build killed with a tool call pending can be reattached and finished |
 | `pnpm agent:retention <sessionId>` | The session and every uploaded page body are actually deleted |
 | `pnpm extension:test` | In headless Chrome: worker registers, new tab renders, port protocol answers, `chrome.history` reads |
@@ -297,8 +315,8 @@ list, the redirect recheck and the private-address check are identical. The chat
 path has no server-side session, so nothing needs deleting. The provider's own
 retention applies (BharatCode's Free and Lite plans may log prompts). The chat
 system prompt comes from `buildSystemPrompt("local")`. The Managed Agents prompt
-is `buildSystemPrompt("sandbox")`. It is byte-identical to before, so existing
-agents are not re-versioned.
+is `buildSystemPrompt("sandbox")`. When it changes, `ensureAgent` sees a new
+fingerprint and updates the agent in place.
 
 **On-device privacy filter (Safari, opt-in).** With the setting on, the bridge
 passes every scraped page through `filterPages` before agent-core sees it. The

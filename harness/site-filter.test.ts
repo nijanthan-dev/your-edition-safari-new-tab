@@ -56,8 +56,8 @@ async function runTools(urls: string[], blockedSites?: string[] | (() => Promise
       },
     },
     files: {
-      list: async function* () { yield { id: "output", filename: "homepage.tsx" }; },
-      download: async () => new Response("export default function PersonalizedHomepage() {}"),
+      list: async function* () { yield { id: "output", filename: "homepage.html" }; },
+      download: async () => new Response("<!doctype html><html><body>Hi</body></html>"),
       upload: async ({ file }: { file: File }) => { uploads.push(file.name); return { id: `file-${uploads.length}` }; },
       delete: async () => {},
     },

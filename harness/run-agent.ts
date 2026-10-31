@@ -52,15 +52,11 @@ async function main() {
   console.log(`elapsed      : ${elapsed}s`);
   console.log(`written to   : ${OUT_PATH}`);
 
-  // Shape checks. The real proof is `pnpm agent:verify`, which
-  // transforms, evaluates and server-renders the component.
+  // Shape checks. The full proof is `pnpm agent:verify`.
   const checks: Array<[string, boolean]> = [
-    // `export default function PersonalizedHomepage()` and
-    // `export default PersonalizedHomepage;` are both valid.
-    ["default-exports the component", /export\s+default\s+(function\s+)?PersonalizedHomepage\b/.test(result.code)],
-    ["imports React", /import\s+React/.test(result.code)],
-    ["no non-React imports", !/from\s+['"](?!react['"])[^'"]+['"]/.test(result.code)],
-    ["has real hrefs", /https?:\/\//.test(result.code)],
+    ["is an HTML document", /^\s*<!doctype html>/i.test(result.code)],
+    ["has no <script>", !/<script[\s>]/i.test(result.code)],
+    ["has real hrefs", /href="https?:\/\//.test(result.code)],
   ];
 
   console.log("\n========== CONTRACT ==========");

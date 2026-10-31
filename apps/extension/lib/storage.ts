@@ -42,7 +42,7 @@ export const KEYS = {
 } as const;
 
 export interface Homepage {
-  /** The agent's raw TSX source. */
+  /** The edition's HTML, as the agent wrote it. (Before version 0.3: React TSX.) */
   code: string;
   /** ISO timestamp of when it was built. */
   timestamp: string;

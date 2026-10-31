@@ -19,7 +19,7 @@ type Port = ReturnType<typeof browser.runtime.connect>;
  * Thin client onto the worker-hosted build. Connects the port, subscribes for a
  * snapshot, and reduces incoming deltas into React state. Every open tab runs
  * one of these, so they all render the same live run. `onDone` receives the
- * new homepage's raw TSX.
+ * new edition's HTML.
  */
 export function useHomepageBuild(onDone: (code: string) => void) {
   const [state, setState] = useState<BuildState>(INITIAL_BUILD_STATE);

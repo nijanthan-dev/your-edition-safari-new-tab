@@ -1,81 +1,45 @@
 /**
- * Proves the agent's deliverable is actually renderable, rather than merely
- * regex-shaped like React.
+ * Proves the agent's deliverable is a page the new tab can show safely: one
+ * static HTML document with real links, no scripts and no external files.
  *
- * Mirrors what the new-tab page does: transform TSX -> JS (sucrase, same as
- * apps/extension/lib/transpile.ts), then evaluate and server-render it. If this
- * passes, Sandpack will mount it.
+ * The new tab shows it in a frame that runs no scripts (EditionFrame.tsx), so a
+ * script would do nothing, but its presence means the model broke the contract.
  *
  * Run: pnpm agent:verify [path]   (default: the last pnpm agent:run output)
  */
 import { readFileSync } from "node:fs";
-import { transform } from "sucrase";
-import React from "react";
-import { renderToString } from "react-dom/server";
 import { OUT_PATH } from "./node-bridge";
 
 const path = process.argv[2] ?? OUT_PATH;
-const source = readFileSync(path, "utf-8");
+const html = readFileSync(path, "utf-8");
 
 function fail(msg: string): never {
   console.error(`❌ ${msg}`);
   process.exit(1);
 }
 
-// ---- 1. transform ---------------------------------------------------------
-let js: string;
-try {
-  js = transform(source, {
-    transforms: ["typescript", "jsx", "imports"],
-    jsxRuntime: "classic",
-  }).code;
-} catch (err) {
-  fail(`sucrase failed to transform ${path}: ${err}`);
+// ---- 1. a whole document ---------------------------------------------------
+if (!/^\s*<!doctype html>/i.test(html)) fail("does not start with <!doctype html>");
+if (!/<style[\s>]/i.test(html)) fail("has no <style> element");
+if (html.trim().length < 2000) fail(`page suspiciously small (${html.length}b)`);
+console.log(`✅ a complete HTML document (${html.length} bytes)`);
+
+// ---- 2. no code and no external files ---------------------------------------
+if (/<script[\s>]/i.test(html)) fail("contains a <script> element");
+if (/\son[a-z]+\s*=/i.test(html)) fail("contains an on…= event attribute");
+if (/javascript:/i.test(html)) fail("contains a javascript: URL");
+if (/<link[^>]+rel=["']?stylesheet/i.test(html) || /@import|@font-face/i.test(html)) {
+  fail("loads an external stylesheet or font");
 }
-console.log(`✅ transforms (TSX -> JS, ${source.length}b -> ${js.length}b)`);
+console.log("✅ no scripts, event handlers, external stylesheets or fonts");
 
-// ---- 2. evaluate in a CommonJS shim exposing only React -------------------
-const module_ = { exports: {} as any };
-const require_ = (name: string) => {
-  if (name === "react") return React;
-  fail(`component imported "${name}" — only "react" is allowed (it renders standalone)`);
-};
-
-try {
-  new Function("require", "module", "exports", "React", js)(
-    require_,
-    module_,
-    module_.exports,
-    React,
-  );
-} catch (err) {
-  fail(`component threw while evaluating: ${err}`);
-}
-
-const Component = module_.exports.default ?? module_.exports.PersonalizedHomepage;
-if (typeof Component !== "function") {
-  fail(`no default-exported component found (got ${typeof Component})`);
-}
-console.log(`✅ default export is a component (${Component.name || "anonymous"})`);
-
-// ---- 3. render ------------------------------------------------------------
-let html: string;
-try {
-  html = renderToString(React.createElement(Component));
-} catch (err) {
-  fail(`render threw: ${err}`);
-}
-
-if (html.trim().length < 500) fail(`rendered output suspiciously small (${html.length}b)`);
-console.log(`✅ renders to ${html.length} bytes of HTML`);
-
-// ---- 4. the deliverable actually contains real, linkable content ----------
+// ---- 3. real, linkable content ----------------------------------------------
 const hrefs = [...html.matchAll(/href="(https?:\/\/[^"]+)"/g)].map((m) => m[1]);
 const unique = new Set(hrefs);
 if (unique.size < 5) fail(`only ${unique.size} distinct external links — expected real scraped URLs`);
 console.log(`✅ ${unique.size} distinct external links`);
 
-const placeholders = hrefs.filter((h) => /example\.com|placeholder|#$/.test(h));
+const placeholders = [...html.matchAll(/href="([^"]*)"/g)].map((m) => m[1]).filter((h) => /example\.com|placeholder|^#$/.test(h));
 if (placeholders.length) fail(`placeholder links present: ${placeholders.slice(0, 3).join(", ")}`);
 console.log(`✅ no placeholder links`);
 
@@ -83,4 +47,4 @@ const domains = new Set([...unique].map((u) => new URL(u).hostname.replace(/^www
 console.log(`\nLinked domains (${domains.size}):`);
 for (const d of [...domains].sort().slice(0, 12)) console.log(`   ${d}`);
 
-console.log(`\n\x1b[32mVERIFIED\x1b[0m — ${path} is a renderable homepage.`);
+console.log(`\n\x1b[32mVERIFIED\x1b[0m — ${path} is a safe, static edition.`);
