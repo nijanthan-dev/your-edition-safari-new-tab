@@ -122,7 +122,7 @@ export class BuildManager {
       const attempts = interrupted?.attempts ?? 0;
       if (attempts >= MAX_RESTARTS) {
         await extensionStore.remove(KEYS.activeBuild);
-        const message = "Safari stopped the build several times. Keep a Morning Tab tab open, then try again.";
+        const message = "Safari stopped the build several times. Keep a Your Edition tab open, then try again.";
         this.state = { ...INITIAL_BUILD_STATE, phase: "error", error: message };
         this.broadcast({ kind: "error", message });
         await this.mirror(true);

@@ -50,7 +50,7 @@ export function ImproveTabPanel() {
       const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
       const a = document.createElement("a");
       a.href = url;
-      a.download = `morning-tab-history-${new Date().toISOString().slice(0, 10)}.json`;
+      a.download = `your-edition-history-${new Date().toISOString().slice(0, 10)}.json`;
       a.click();
       setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch (error) {
@@ -63,7 +63,7 @@ export function ImproveTabPanel() {
       <strong>Improve this tab</strong>
       <p style={help}>
         Safari does not share your history with extensions. Import it once, so the agent knows
-        the sites you read before you installed Morning Tab.
+        the sites you read before you installed Your Edition.
       </p>
       <ol style={{ ...help, paddingLeft: 18 }}>
         <li>In Safari, choose File &gt; Export Browsing Data to File…</li>
@@ -90,7 +90,7 @@ export function ImproveTabPanel() {
       </div>
       {status && <p style={{ ...help, color: "#333" }}>{status}</p>}
       <p style={help}>
-        Morning Tab reads only History.json, never passwords or other files in the export. It
+        Your Edition reads only History.json, never passwords or other files in the export. It
         keeps the last 30 days on this Mac.
       </p>
     </div>

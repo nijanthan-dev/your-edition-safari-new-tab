@@ -38,7 +38,7 @@ export async function filterUnavailableReason(): Promise<string | null> {
     const reply = await ask({ kind: "status" }, STATUS_TIMEOUT_MS);
     return reply.ok ? null : reply.reason;
   } catch (error) {
-    return `the Morning Tab app did not answer (${String(error)})`;
+    return `the Your Edition app did not answer (${String(error)})`;
   }
 }
 

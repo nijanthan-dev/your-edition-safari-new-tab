@@ -28,7 +28,7 @@ export async function explainBuildError(error: unknown): Promise<string> {
   const host = error instanceof ChatConnectionError ? "the model provider" : "api.anthropic.com";
   const granted = await browser.permissions.contains(ALL_SITES).catch(() => true);
   return granted
-    ? `Morning Tab can't reach ${host}. Check your internet connection, then try again.`
-    : `Morning Tab can't reach ${host}, because it has no website access. ` +
-        "In Safari, open Settings > Extensions > Morning Tab and click Always Allow on Every Website. Then try again.";
+    ? `Your Edition can't reach ${host}. Check your internet connection, then try again.`
+    : `Your Edition can't reach ${host}, because it has no website access. ` +
+        "In Safari, open Settings > Extensions > Your Edition and click Always Allow on Every Website. Then try again.";
 }

@@ -10,7 +10,7 @@ import { strFromU8, unzipSync } from "fflate";
  *   `{ "history": [{ url, title, time_usec, visit_count }] }`. Apple does not
  *   document it; the fields match Chromium's Safari importer.
  * - Chrome (Google Takeout): `{ "Browser History": [{ url, title, time_usec }] }`.
- * - Morning Tab's own export (EXPORT_FORMAT).
+ * - Your Edition's own export (EXPORT_FORMAT).
  */
 
 export interface ImportedVisit {
@@ -20,7 +20,7 @@ export interface ImportedVisit {
   visitCount: number;
 }
 
-export const EXPORT_FORMAT = "morning-tab-visit-log";
+export const EXPORT_FORMAT = "your-edition-visit-log";
 
 /** Only this file is ever decompressed from a ZIP. A Safari export can also hold passwords and cards. */
 const HISTORY_FILE = /(^|\/)History\.json$/i;

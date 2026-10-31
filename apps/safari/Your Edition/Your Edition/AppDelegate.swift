@@ -1,6 +1,6 @@
 //
 //  AppDelegate.swift
-//  Morning Tab
+//  Your Edition
 //
 //
 

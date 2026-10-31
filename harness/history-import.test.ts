@@ -26,7 +26,7 @@ describe("parseHistoryJson", () => {
     ]);
   });
 
-  test("reads Chrome Takeout and Morning Tab's own export", () => {
+  test("reads Chrome Takeout and Your Edition's own export", () => {
     const takeout = { "Browser History": [{ url: "https://x.example/", title: "X", time_usec: usec(T) }] };
     expect(parseHistoryJson(JSON.stringify(takeout))).toEqual([
       { url: "https://x.example/", title: "X", lastVisitTime: T, visitCount: 1 },

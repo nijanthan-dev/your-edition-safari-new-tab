@@ -27,9 +27,9 @@ export default defineConfig({
     // Safari lacks the history and notifications APIs. lib/visit-log.ts stands in for history.
     const safari = browser === "safari";
     return {
-      name: "Morning Tab",
+      name: "Your Edition",
       // install:safari sets this so the manifest, the app and the extension share one version.
-      ...(process.env.MORNING_TAB_VERSION ? { version: process.env.MORNING_TAB_VERSION } : {}),
+      ...(process.env.YOUR_EDITION_VERSION ? { version: process.env.YOUR_EDITION_VERSION } : {}),
       description: "An AI new tab page that writes your homepage from what you've actually been browsing.",
       permissions: [
         ...(safari ? [] : ["history"]), // getHistory tool

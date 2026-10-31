@@ -132,7 +132,7 @@ Layout, top to bottom. Max width 1240px, centered, 32px side padding.
 1. Top rail: three small label-style items on one line, left / center / right:
    "VOL. I · NO. {day of year}", "YOUR CORNER OF THE INTERNET", "PRICE: ONE OPEN TAB".
    A 1px rule under it.
-2. Masthead: "The Morning Tab", centered, display font, bold, about 120px
+2. Masthead: "Your Edition", centered, display font, bold, about 120px
    (clamp(56px, 9vw, 128px)). Under it, centered, in italic body serif:
    "All the news that fits your history." in curly quotes.
 3. Dateline bar between a double rule (top, 4px double) and a 2px rule (bottom):

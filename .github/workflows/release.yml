@@ -1,10 +1,10 @@
 name: Release
 
 # Each push to main tags the next version and publishes a GitHub release with:
-# - Morning-Tab-<version>-mac.zip                the signed, notarized Mac app (only
+# - Your-Edition-<version>-mac.zip                the signed, notarized Mac app (only
 #                                                when the signing secrets are set)
-# - morning-tab-safari-extension-<version>.zip  the Safari bundle (build the app yourself)
-# - morning-tab-chrome-<version>.zip            the Chrome extension
+# - your-edition-safari-extension-<version>.zip  the Safari bundle (build the app yourself)
+# - your-edition-chrome-<version>.zip            the Chrome extension
 # - SHA256SUMS.txt
 #
 # Next version: the patch after the latest vX.Y.Z tag. To jump to a new minor or
@@ -119,8 +119,8 @@ jobs:
       - name: Build, sign and notarize
         if: steps.check.outputs.signed == 'true'
         env:
-          MORNING_TAB_OUTPUT: ${{ runner.temp }}/app
-          MORNING_TAB_VERSION: ${{ needs.version.outputs.version }}
+          YOUR_EDITION_OUTPUT: ${{ runner.temp }}/app
+          YOUR_EDITION_VERSION: ${{ needs.version.outputs.version }}
           SIGN_IDENTITY: ${{ secrets.MACOS_SIGN_IDENTITY }}
           TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           NOTARY_KEY_PATH: ${{ runner.temp }}/AuthKey.p8
@@ -130,7 +130,7 @@ jobs:
           npx pnpm@10.11.1 install --frozen-lockfile
           sh scripts/install-safari.sh
           mkdir -p dist
-          ditto -c -k --keepParent "$MORNING_TAB_OUTPUT/Morning Tab.app" "dist/Morning-Tab-$VERSION-mac.zip"
+          ditto -c -k --keepParent "$YOUR_EDITION_OUTPUT/Your Edition.app" "dist/Your-Edition-$VERSION-mac.zip"
 
       - name: Remove the keychain and API key
         if: always() && steps.check.outputs.signed == 'true'
@@ -183,8 +183,8 @@ jobs:
       - name: Package
         run: |
           mkdir -p dist
-          (cd apps/extension/.output/safari-mv3 && zip -qr "$GITHUB_WORKSPACE/dist/morning-tab-safari-extension-$VERSION.zip" .)
-          (cd apps/extension/.output/chrome-mv3 && zip -qr "$GITHUB_WORKSPACE/dist/morning-tab-chrome-$VERSION.zip" .)
+          (cd apps/extension/.output/safari-mv3 && zip -qr "$GITHUB_WORKSPACE/dist/your-edition-safari-extension-$VERSION.zip" .)
+          (cd apps/extension/.output/chrome-mv3 && zip -qr "$GITHUB_WORKSPACE/dist/your-edition-chrome-$VERSION.zip" .)
           (cd dist && sha256sum *.zip > SHA256SUMS.txt && cat SHA256SUMS.txt)
 
       - name: Tag and publish
@@ -194,5 +194,5 @@ jobs:
         run: |
           gh release create "$TAG" dist/* \
             --target "$GITHUB_SHA" \
-            --title "Morning Tab $TAG" \
+            --title "Your Edition $TAG" \
             --generate-notes

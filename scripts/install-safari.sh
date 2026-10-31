@@ -6,13 +6,13 @@
 # copied to ~/Applications, and the build copy is unregistered and deleted.
 # Run it with `pnpm install:safari`.
 #
-# The release workflow runs it with MORNING_TAB_OUTPUT=<folder>: then it builds,
+# The release workflow runs it with YOUR_EDITION_OUTPUT=<folder>: then it builds,
 # signs and notarizes the app into that folder, and installs nothing.
 set -eu
-OUTPUT_DIR="${MORNING_TAB_OUTPUT:-}"
+OUTPUT_DIR="${YOUR_EDITION_OUTPUT:-}"
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
-APP_NAME="Morning Tab"
+APP_NAME="Your Edition"
 DEST="$HOME/Applications/$APP_NAME.app"
 LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister
 BUILD_DIR=$(mktemp -d)
@@ -61,7 +61,7 @@ BUILT="$BUILD_DIR/Build/Products/Release/$APP_NAME.app"
 # macOS never sees two different apps with the same version and build.
 git -C "$ROOT" fetch --tags --quiet 2>/dev/null || true
 # The release workflow passes the version it is about to tag.
-VERSION="${MORNING_TAB_VERSION:-}"
+VERSION="${YOUR_EDITION_VERSION:-}"
 [ -n "$VERSION" ] || VERSION=$(git -C "$ROOT" tag --list 'v[0-9]*.[0-9]*.[0-9]*' | sed 's/^v//' | sort -V | tail -1)
 [ -n "$VERSION" ] || VERSION=$(node -p "require('$ROOT/apps/extension/package.json').version")
 BUILD_NUMBER=$(date +%Y%m%d%H%M)
@@ -119,7 +119,7 @@ fi
 
 echo "Building the extension bundle (version $VERSION, build $BUILD_NUMBER)..."
 WXT_LOG="$BUILD_DIR/wxt.log"
-(cd "$ROOT/apps/extension" && MORNING_TAB_VERSION="$VERSION" ./node_modules/.bin/wxt build -b safari --mv3) \
+(cd "$ROOT/apps/extension" && YOUR_EDITION_VERSION="$VERSION" ./node_modules/.bin/wxt build -b safari --mv3) \
   >"$WXT_LOG" 2>&1 || { cat "$WXT_LOG" >&2; exit 1; }
 
 echo "Building $APP_NAME..."
@@ -141,13 +141,22 @@ if [ -n "$OUTPUT_DIR" ]; then
   mkdir -p "$OUTPUT_DIR"
   rm -rf "$OUTPUT_DIR/$APP_NAME.app"
   ditto "$BUILT" "$OUTPUT_DIR/$APP_NAME.app"
-  # On a Mac with Safari, an extra registered copy shows a second Morning Tab.
+  # On a Mac with Safari, an extra registered copy shows a second Your Edition.
   "$LSREGISTER" -u "$OUTPUT_DIR/$APP_NAME.app" 2>/dev/null || true
   echo "Built $OUTPUT_DIR/$APP_NAME.app (version $VERSION, build $BUILD_NUMBER)"
   exit 0
 fi
 
 osascript -e "quit app \"$APP_NAME\"" 2>/dev/null || true
+# The app was called Morning Tab before. It has the same bundle ID, so Safari
+# would list both copies: remove the old one.
+OLD_APP="$HOME/Applications/Morning Tab.app"
+if [ -d "$OLD_APP" ]; then
+  osascript -e 'quit app "Morning Tab"' 2>/dev/null || true
+  "$LSREGISTER" -u "$OLD_APP" 2>/dev/null || true
+  rm -rf "$OLD_APP"
+  echo "Removed the old Morning Tab app."
+fi
 mkdir -p "$HOME/Applications"
 rm -rf "$DEST"
 ditto "$BUILT" "$DEST"
@@ -156,7 +165,7 @@ open "$DEST"
 
 echo "Installed $DEST (version $VERSION, build $BUILD_NUMBER)"
 if [ -n "$SIGN_IDENTITY" ]; then
-  echo "Next: open Safari, then Settings > Extensions, and select Morning Tab."
+  echo "Next: open Safari, then Settings > Extensions, and select Your Edition."
 else
   echo "Next: open Safari. Then open Develop > Developer Settings and select Allow unsigned extensions."
 fi

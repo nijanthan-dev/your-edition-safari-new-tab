@@ -1,6 +1,6 @@
 //
 //  PrivacyFilter.swift
-//  Morning Tab Extension
+//  Your Edition Extension
 //
 //  The on-device privacy filter. The extension sends each chunk of a scraped
 //  page here before anything is uploaded. Apple's on-device model (Foundation

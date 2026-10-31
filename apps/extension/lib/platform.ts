@@ -7,7 +7,7 @@
 export const HAS_HISTORY_API = typeof browser.history?.search === "function";
 
 /**
- * Without a history API, Morning Tab logs page loads itself (lib/visit-log.ts),
+ * Without a history API, Your Edition logs page loads itself (lib/visit-log.ts),
  * and the Improve this tab panel imports into that log.
  */
 export const USES_VISIT_LOG = !HAS_HISTORY_API;

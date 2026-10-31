@@ -13,15 +13,15 @@
   "files": [
     {
       "kind": "group",
-      "path": "Morning Tab",
+      "path": "Your Edition",
       "children": [
-        { "path": "AppDelegate.swift", "target-membership": [ "Morning Tab/compile-sources" ] },
-        { "path": "ViewController.swift", "target-membership": [ "Morning Tab/compile-sources" ] },
+        { "path": "AppDelegate.swift", "target-membership": [ "Your Edition/compile-sources" ] },
+        { "path": "ViewController.swift", "target-membership": [ "Your Edition/compile-sources" ] },
         {
           "kind": "variant-group",
           "name": "Main.storyboard",
           "target-membership": [
-            "Morning Tab/resources",
+            "Your Edition/resources",
           ],
           "children": [
             {
@@ -29,7 +29,7 @@
             },
           ],
         },
-        { "path": "Assets.xcassets", "target-membership": [ "Morning Tab/resources" ] },
+        { "path": "Assets.xcassets", "target-membership": [ "Your Edition/resources" ] },
         { "path": "Info.plist" },
         {
           "kind": "group",
@@ -39,7 +39,7 @@
               "kind": "variant-group",
               "name": "Main.html",
               "target-membership": [
-                "Morning Tab/resources",
+                "Your Edition/resources",
               ],
               "children": [
                 {
@@ -47,51 +47,51 @@
                 },
               ],
             },
-            { "path": "Icon.png", "target-membership": [ "Morning Tab/resources" ] },
-            { "path": "Style.css", "target-membership": [ "Morning Tab/resources" ] },
-            { "path": "Script.js", "target-membership": [ "Morning Tab/resources" ] },
+            { "path": "Icon.png", "target-membership": [ "Your Edition/resources" ] },
+            { "path": "Style.css", "target-membership": [ "Your Edition/resources" ] },
+            { "path": "Script.js", "target-membership": [ "Your Edition/resources" ] },
           ],
         },
       ],
     }, {
       "kind": "group",
-      "path": "Morning Tab Extension",
+      "path": "Your Edition Extension",
       "children": [
         {
           "kind": "group",
-          "path": "<PROJECT>/Morning Tab Extension",
+          "path": "<PROJECT>/Your Edition Extension",
           "name": "Resources",
           "children": [
-            { "path": "../../../extension/.output/safari-mv3/background.js", "target-membership": [ "Morning Tab Extension/resources" ] },
-            { "path": "../../../extension/.output/safari-mv3/newtab.html", "target-membership": [ "Morning Tab Extension/resources" ] },
-            { "path": "../../../extension/.output/safari-mv3/chunks", "target-membership": [ "Morning Tab Extension/resources" ] },
-            { "path": "../../../extension/.output/safari-mv3/content-scripts", "target-membership": [ "Morning Tab Extension/resources" ] },
-            { "path": "../../../extension/.output/safari-mv3/manifest.json", "target-membership": [ "Morning Tab Extension/resources" ] },
-            { "path": "../../../extension/.output/safari-mv3/icon", "target-membership": [ "Morning Tab Extension/resources" ] },
-            { "path": "../../../extension/.output/safari-mv3/assets", "target-membership": [ "Morning Tab Extension/resources" ] },
+            { "path": "../../../extension/.output/safari-mv3/background.js", "target-membership": [ "Your Edition Extension/resources" ] },
+            { "path": "../../../extension/.output/safari-mv3/newtab.html", "target-membership": [ "Your Edition Extension/resources" ] },
+            { "path": "../../../extension/.output/safari-mv3/chunks", "target-membership": [ "Your Edition Extension/resources" ] },
+            { "path": "../../../extension/.output/safari-mv3/content-scripts", "target-membership": [ "Your Edition Extension/resources" ] },
+            { "path": "../../../extension/.output/safari-mv3/manifest.json", "target-membership": [ "Your Edition Extension/resources" ] },
+            { "path": "../../../extension/.output/safari-mv3/icon", "target-membership": [ "Your Edition Extension/resources" ] },
+            { "path": "../../../extension/.output/safari-mv3/assets", "target-membership": [ "Your Edition Extension/resources" ] },
           ],
         },
-        { "path": "SafariWebExtensionHandler.swift", "target-membership": [ "Morning Tab Extension/compile-sources" ] },
-        { "path": "PrivacyFilter.swift", "target-membership": [ "Morning Tab Extension/compile-sources" ] },
+        { "path": "SafariWebExtensionHandler.swift", "target-membership": [ "Your Edition Extension/compile-sources" ] },
+        { "path": "PrivacyFilter.swift", "target-membership": [ "Your Edition Extension/compile-sources" ] },
         { "path": "Info.plist" },
       ],
     }, {
       "kind": "group",
       "name": "Products",
       "children": [
-        { "path": "<PRODUCTS>/Morning Tab.app", "id": "224AC4503095796000D5BEAD", "type": "wrapper.application", "index": false },
-        { "path": "<PRODUCTS>/Morning Tab Extension.appex", "id": "224AC46B3095796200D5BEAD", "type": "wrapper.app-extension", "index": false, "target-membership": [ { "build-phase": "Morning Tab/copy/Embed Foundation Extensions", "header-preservation": "remove-on-copy" } ] },
+        { "path": "<PRODUCTS>/Your Edition.app", "id": "224AC4503095796000D5BEAD", "type": "wrapper.application", "index": false },
+        { "path": "<PRODUCTS>/Your Edition Extension.appex", "id": "224AC46B3095796200D5BEAD", "type": "wrapper.app-extension", "index": false, "target-membership": [ { "build-phase": "Your Edition/copy/Embed Foundation Extensions", "header-preservation": "remove-on-copy" } ] },
       ],
     },
   ],
   "targets": [
     {
-      "name": "Morning Tab",
+      "name": "Your Edition",
       "id": "224AC44F3095796000D5BEAD",
-      "product": "Products/Morning Tab.app",
+      "product": "Products/Your Edition.app",
       "product-type": "application",
       "dependencies": [
-        "Morning Tab Extension",
+        "Your Edition Extension",
       ],
       "build-phases": [
         "compile-sources",
@@ -114,8 +114,8 @@
         "ENABLE_OUTGOING_NETWORK_CONNECTIONS": "YES",
         "ENABLE_USER_SELECTED_FILES": "readonly",
         "GENERATE_INFOPLIST_FILE": "YES",
-        "INFOPLIST_FILE": "Morning Tab/Info.plist",
-        "INFOPLIST_KEY_CFBundleDisplayName": "Morning Tab",
+        "INFOPLIST_FILE": "Your Edition/Info.plist",
+        "INFOPLIST_KEY_CFBundleDisplayName": "Your Edition",
         "INFOPLIST_KEY_NSHumanReadableCopyright": "",
         "INFOPLIST_KEY_NSMainStoryboardFile": "Main",
         "INFOPLIST_KEY_NSPrincipalClass": "NSApplication",
@@ -142,9 +142,9 @@
         "SWIFT_VERSION": "5.0",
       },
     }, {
-      "name": "Morning Tab Extension",
+      "name": "Your Edition Extension",
       "id": "224AC46A3095796200D5BEAD",
-      "product": "Products/Morning Tab Extension.appex",
+      "product": "Products/Your Edition Extension.appex",
       "product-type": "app-extension",
       "build-phases": [
         "compile-sources",
@@ -158,8 +158,8 @@
         "ENABLE_HARDENED_RUNTIME": "YES",
         "ENABLE_USER_SELECTED_FILES": "readonly",
         "GENERATE_INFOPLIST_FILE": "YES",
-        "INFOPLIST_FILE": "Morning Tab Extension/Info.plist",
-        "INFOPLIST_KEY_CFBundleDisplayName": "Morning Tab Extension",
+        "INFOPLIST_FILE": "Your Edition Extension/Info.plist",
+        "INFOPLIST_KEY_CFBundleDisplayName": "Your Edition Extension",
         "INFOPLIST_KEY_NSHumanReadableCopyright": "",
         "LD_RUNPATH_SEARCH_PATHS": [
           "$(inherited)",

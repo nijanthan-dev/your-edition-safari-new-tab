@@ -1,6 +1,6 @@
 //
 //  SafariWebExtensionHandler.swift
-//  Morning Tab Extension
+//  Your Edition Extension
 //
 //  Answers browser.runtime.sendNativeMessage from the extension. The only
 //  messages are for the on-device privacy filter (PrivacyFilter.swift):

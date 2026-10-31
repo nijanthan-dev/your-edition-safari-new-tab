@@ -1,21 +1,21 @@
-# Morning Tab: an AI new tab page for Safari, with an on-device privacy filter
+# Your Edition: an AI new tab page for Safari, with an on-device privacy filter
 
 **Start here:** run these 3 commands, then do the Safari steps below. Setup takes about 10 minutes.
 
 ```bash
-git clone https://github.com/nijanthan-dev/morning-tab-safari.git
+git clone https://github.com/nijanthan-dev/your-edition-safari-new-tab.git
 cd morning-tab-safari
 npx pnpm@10.11.1 install && npx pnpm@10.11.1 install:safari
 ```
 
-Morning Tab replaces the Safari new tab page. An AI agent reads the sites you visit and writes a new homepage for you each morning.
+Your Edition replaces the Safari new tab page. An AI agent reads the sites you visit and writes a new homepage for you each morning.
 
 **Privacy option:** turn on the [on-device privacy filter](#the-on-device-privacy-filter-optional). Apple Intelligence then reads each page on your Mac, and only short summaries go to your model provider.
 
 ![An example homepage in a morning-newspaper style](docs/preview.png)
 <sub>Illustration of the default look. The agent builds your homepage from your own browsing, so your stories will be different.</sub>
 
-> **Credit.** Morning Tab is a Safari port of [**AI Homepage (ThariqS/ai-newtab)**](https://github.com/ThariqS/ai-newtab) by [Thariq Shihipar](https://github.com/ThariqS).
+> **Credit.** Your Edition is a Safari port of [**AI Homepage (ThariqS/ai-newtab)**](https://github.com/ThariqS/ai-newtab) by [Thariq Shihipar](https://github.com/ThariqS).
 > The agent, the new tab interface and the design are his work. This fork adds Safari support.
 > This fork is not affiliated with the original author, Apple or Anthropic. The license is MIT, the same as the original.
 
@@ -32,16 +32,16 @@ You need:
 ### Part 1 of 2: Build and install the app (about 5 minutes)
 
 1. Run the 3 commands at the top of this page.
-2. The last command builds the app, installs it in `~/Applications/Morning Tab.app` and opens it. You do not need to open Xcode.
+2. The last command builds the app, installs it in `~/Applications/Your Edition.app` and opens it. You do not need to open Xcode.
 3. If Safari is open, the command asks you to quit Safari first. Safari 27 can crash if the command replaces the app while Safari is open.
 
 The app, its extension and the extension manifest all use one version: the latest release tag, for example `0.1.9`. Each install also gets a new build number (the date and time), so macOS and Safari never see two different builds with the same number.
 
-The install script keeps exactly one copy of the app. macOS registers every app that Xcode builds, and Safari shows one **Morning Tab** for each copy that it finds. So the script builds in a temporary folder, copies the app to `~/Applications`, then deletes the build copy.
+The install script keeps exactly one copy of the app. macOS registers every app that Xcode builds, and Safari shows one **Your Edition** for each copy that it finds. So the script builds in a temporary folder, copies the app to `~/Applications`, then deletes the build copy.
 
 ### Optional: sign with your own certificate
 
-If you have a **Developer ID Application** certificate, the install command can sign the app with it and have Apple notarize it. Then Safari treats Morning Tab as a trusted extension, so you do not need **Allow unsigned extensions**.
+If you have a **Developer ID Application** certificate, the install command can sign the app with it and have Apple notarize it. Then Safari treats Your Edition as a trusted extension, so you do not need **Allow unsigned extensions**.
 
 Safari hides a Developer ID app that Apple has not notarized, even with **Allow unsigned extensions** on. So the script signs only when it can also notarize.
 
@@ -50,8 +50,8 @@ Safari hides a Developer ID app that Apple has not notarized, even with **Allow 
 3. Copy the team ID, the code in brackets, into `TEAM_ID`.
 4. Make an app-specific password at [account.apple.com](https://account.apple.com) (**Sign-In and Security → App-Specific Passwords**).
 5. Store it in your keychain. Run this command and paste the password when it asks:
-   `xcrun notarytool store-credentials morning-tab-notary --apple-id YOUR_APPLE_ID --team-id YOUR_TEAM_ID`
-6. Set `NOTARY_PROFILE=morning-tab-notary` in `signing.local.env`.
+   `xcrun notarytool store-credentials your-edition-notary --apple-id YOUR_APPLE_ID --team-id YOUR_TEAM_ID`
+6. Set `NOTARY_PROFILE=your-edition-notary` in `signing.local.env`.
 7. Quit Safari. Run `npx pnpm@10.11.1 install:safari` again. Notarization adds 2 to 5 minutes.
 
 Git ignores `signing.local.env`, so your certificate and team ID stay on your Mac. The script also signs the app without the debugging entitlement (`get-task-allow`) that Xcode adds. It keeps the App Sandbox that Safari needs.
@@ -62,8 +62,8 @@ The password stays in your keychain. The script uses only the profile name.
 
 1. Open **Safari → Settings → Advanced**. Select **Show features for web developers**.
 2. Open **Develop → Developer Settings…**. Select **Allow unsigned extensions**. If you signed and notarized the app (see above), skip this step.
-3. Open **Settings → Extensions**. Enable **Morning Tab**. Click **Always Allow on Every Website…**. Morning Tab needs this access to reach your model provider and to read your pages.
-4. Open **Settings → General**. Set **New tabs open with** to **Morning Tab**.
+3. Open **Settings → Extensions**. Enable **Your Edition**. Click **Always Allow on Every Website…**. Your Edition needs this access to reach your model provider and to read your pages.
+4. Open **Settings → General**. Set **New tabs open with** to **Your Edition**.
 
 > Safari clears **Allow unsigned extensions** each time Safari quits. After a restart, do step 2 again. A signed and notarized app does not need this setting.
 
@@ -71,16 +71,16 @@ The password stays in your keychain. The script uses only the profile name.
 
 | Problem | Cause | Fix |
 | --- | --- | --- |
-| **Morning Tab** is not in the extension list | **Allow unsigned extensions** is off. Safari turns it off each time Safari quits or crashes. | Open **Develop → Developer Settings…** and select **Allow unsigned extensions** again. If it is still missing, quit Safari (⌘Q), open it, and do that step again. |
+| **Your Edition** is not in the extension list | **Allow unsigned extensions** is off. Safari turns it off each time Safari quits or crashes. | Open **Develop → Developer Settings…** and select **Allow unsigned extensions** again. If it is still missing, quit Safari (⌘Q), open it, and do that step again. |
 | Safari crashes during an install | Safari 27 crashes when it loads a replaced extension and adds its toolbar button again. This is a bug in Safari. | Quit Safari before you run `install:safari`. The command now asks you to do this. |
-| **Morning Tab** shows 2 or more times | macOS has more than one copy of the app, for example from **Run** in Xcode | Run `npx pnpm@10.11.1 install:safari`. Then delete any other copy of `Morning Tab.app`. |
-| "Connection error." or "has no website access" | Safari has not given Morning Tab website access. Morning Tab needs it to reach your model provider and to read pages. | Click **Build today's homepage** and allow access in the prompt. Or open **Settings → Extensions → Morning Tab** and click **Always Allow on Every Website…**. |
+| **Your Edition** shows 2 or more times | macOS has more than one copy of the app, for example from **Run** in Xcode | Run `npx pnpm@10.11.1 install:safari`. Then delete any other copy of `Your Edition.app`. |
+| "Connection error." or "has no website access" | Safari has not given Your Edition website access. Your Edition needs it to reach your model provider and to read pages. | Click **Build today's homepage** and allow access in the prompt. Or open **Settings → Extensions → Your Edition** and click **Always Allow on Every Website…**. |
 | The privacy filter status says "not available" | Apple Intelligence is off or still downloading | See [The on-device privacy filter](#the-on-device-privacy-filter-optional). |
 
 To find every copy that macOS knows about, run this command:
 
 ```bash
-/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -dump | grep "^path:.*Morning Tab"
+/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister -dump | grep "^path:.*Your Edition"
 ```
 
 ## Build your first homepage
@@ -93,7 +93,7 @@ To find every copy that macOS knows about, run this command:
 
 The first build takes a few minutes. The progress view shows each step as the agent works.
 
-**Keep a Morning Tab tab open until the build finishes.** The build runs in the extension's background worker, and any new tab shows it. But Safari can stop that worker when no Morning Tab tab is open. When the worker wakes, an Anthropic build resumes, and a BharatCode build starts again (at most 3 times). Both reuse the pages, and the privacy-filter summaries, from the last 2 hours.
+**Keep a Your Edition tab open until the build finishes.** The build runs in the extension's background worker, and any new tab shows it. But Safari can stop that worker when no Your Edition tab is open. When the worker wakes, an Anthropic build resumes, and a BharatCode build starts again (at most 3 times). Both reuse the pages, and the privacy-filter summaries, from the last 2 hours.
 
 > **Your first homepage is thin.** Safari has no history for the agent to read (see below). To fix this now, [import your Safari history](#improve-this-tab-import-your-safari-history). Otherwise, the homepage gets better over the first few days.
 
@@ -106,7 +106,7 @@ A build sends:
 - A summary of the sites you visit: top domains, visit counts and some page titles
 - Up to 8 pages: the cleaned HTML, or only short summaries if the privacy filter is on
 
-Safari loads those pages with your sign-ins, so they can contain private content. With Anthropic, Morning Tab deletes the agent session and all uploaded pages when each build ends. BharatCode has its own retention rules (see below).
+Safari loads those pages with your sign-ins, so they can contain private content. With Anthropic, Your Edition deletes the agent session and all uploaded pages when each build ends. BharatCode has its own retention rules (see below).
 
 ### The on-device privacy filter (optional)
 
@@ -124,7 +124,7 @@ The privacy filter is the main difference from the original extension. It is off
 How it works:
 
 1. The extension turns each page into plain text, with a number such as `[3]` for each link.
-2. The Morning Tab app gives the text to Apple's on-device model (the Foundation Models framework). The code is in [`PrivacyFilter.swift`](apps/safari/Morning%20Tab/Morning%20Tab%20Extension/PrivacyFilter.swift).
+2. Your Edition app gives the text to Apple's on-device model (the Foundation Models framework). The code is in [`PrivacyFilter.swift`](apps/safari/Morning%20Tab/Morning%20Tab%20Extension/PrivacyFilter.swift).
 3. The model returns items with link numbers only. It never writes a URL.
 4. The extension keeps only items whose number is a real link on the page. It builds the list from those links. The code is in [`privacy-digest.ts`](apps/extension/lib/privacy-digest.ts).
 
@@ -136,9 +136,9 @@ To turn on Apple Intelligence:
 
 **Settings** shows the status of the on-device model under the filter option.
 
-**The filter is slow.** Apple's on-device model reads each page in up to 3 parts, one part at a time. One part takes 10 to 30 seconds, so the filter adds up to 1.5 minutes for each page. During this time, the build stays on **Opening pages in your browser**. The activity log shows each part, for example "Privacy filter: page 2 of 3, part 1 of 3". If the on-device model does not answer within 2 minutes, Morning Tab does not send that page and continues with the others.
+**The filter is slow.** Apple's on-device model reads each page in up to 3 parts, one part at a time. One part takes 10 to 30 seconds, so the filter adds up to 1.5 minutes for each page. During this time, the build stays on **Opening pages in your browser**. The activity log shows each part, for example "Privacy filter: page 2 of 3, part 1 of 3". If the on-device model does not answer within 2 minutes, Your Edition does not send that page and continues with the others.
 
-Safari can stop an extension's background work when it looks idle, and a long wait for the on-device model looks idle. To prevent this, an open Morning Tab tab sends the background a short message every 10 seconds during a build. If Safari stops it anyway, the next build continues where it stopped. Morning Tab keeps the filter's summaries for 2 hours, so the filter does not run on those pages again.
+Safari can stop an extension's background work when it looks idle, and a long wait for the on-device model looks idle. To prevent this, an open Your Edition tab sends the background a short message every 10 seconds during a build. If Safari stops it anyway, the next build continues where it stopped. Your Edition keeps the filter's summaries for 2 hours, so the filter does not run on those pages again.
 
 The filter is a strong extra protection, not a guarantee. The on-device model can miss a personal detail. The pattern check catches only fixed formats. Use **Sites the agent never reads** for sites that you never want opened.
 
@@ -146,82 +146,82 @@ Your API keys, the visit log and the page cache stay in the extension's local st
 
 ## Model providers
 
-Morning Tab can use 2 kinds of provider. Select one in **⚙️ Settings → Model provider**.
+Your Edition can use 2 kinds of provider. Select one in **⚙️ Settings → Model provider**.
 
 | | Anthropic (Claude), the default | BharatCode |
 | --- | --- | --- |
 | Models | Claude Sonnet 5.5. There is no model choice. | Qwen 3.8 27B or DeepSeek V4.1 Flash (open models). You choose one. |
 | Cost | Pay for each build, by tokens | A flat monthly fee: ₹399 (Qwen only) or ₹999 (both models) |
 | How the agent runs | Claude Managed Agents: a session with a sandbox for the pages | A chat loop in the extension. The extension holds the pages in memory and answers the agent's file tools itself. |
-| What happens to your data | Morning Tab deletes the session and the uploaded pages after each build | BharatCode sends prompts to inference partners, some outside India. The Free and Lite plans may keep logs. See its [privacy policy](https://bharatcode.ai/privacy). |
+| What happens to your data | Your Edition deletes the session and the uploaded pages after each build | BharatCode sends prompts to inference partners, some outside India. The Free and Lite plans may keep logs. See its [privacy policy](https://bharatcode.ai/privacy). |
 | Homepage quality | Best | Can be weaker, because the models are smaller |
 | Resume an interrupted build | Yes | No. Start a new build. |
 
-**Your choice sticks.** Morning Tab uses only the provider that you select. It never switches to the other one by itself. If an Anthropic build was interrupted and you then select BharatCode, Morning Tab does not resume the Anthropic build. It deletes that session and the pages uploaded to it.
+**Your choice sticks.** Your Edition uses only the provider that you select. It never switches to the other one by itself. If an Anthropic build was interrupted and you then select BharatCode, Your Edition does not resume the Anthropic build. It deletes that session and the pages uploaded to it.
 
 **If you choose BharatCode, turn on the on-device privacy filter.** Then only short summaries of each page leave your Mac.
 
-**Other providers.** The BharatCode option works with any API that follows the OpenAI chat-completions format and supports tool calls. In Settings, change **Base URL** and type the **Model** name. Morning Tab sends requests to `<Base URL>/chat/completions`.
+**Other providers.** The BharatCode option works with any API that follows the OpenAI chat-completions format and supports tool calls. In Settings, change **Base URL** and type the **Model** name. Your Edition sends requests to `<Base URL>/chat/completions`.
 
 ## How Safari is different from Chrome
 
-**Short version:** Chrome lets an extension read your browsing history. Safari does not. So Morning Tab on Safari keeps its own log of the pages you load, starting from the day you install it.
+**Short version:** Chrome lets an extension read your browsing history. Safari does not. So Your Edition on Safari keeps its own log of the pages you load, starting from the day you install it.
 
 ### Chrome and Safari side by side
 
 | | Chrome | Safari |
 | --- | --- | --- |
 | Extension can read your past history | Yes, with the `history` permission | No. The `history` API does not exist in Safari. |
-| What the agent ranks | Your real Chrome history (14 days by default) | Morning Tab's own visit log (up to 30 days) |
+| What the agent ranks | Your real Chrome history (14 days by default) | Your Edition's own visit log (up to 30 days) |
 | First homepage | Full, from day one | Thin. It gets better over the first few days. |
 | Notification when a background build fails | Yes | No. The error shows in your next new tab. |
 | Install | Load the folder in `chrome://extensions` | Build a Mac app in Xcode. The app contains the extension. |
 | Unsigned extension | Works in Developer mode | Needs **Allow unsigned extensions**. Safari clears it each time Safari quits. A signed and notarized build does not need it. |
 | On-device privacy filter | Not available | Optional. Uses Apple Intelligence on your Mac. |
 
-### Why Morning Tab cannot read your Safari history
+### Why Your Edition cannot read your Safari history
 
 1. **Safari has no history API for extensions.** Chrome and Firefox give extensions `browser.history`. Safari does not. Apple's [browser compatibility guide](https://developer.apple.com/documentation/safariservices/assessing-your-safari-web-extension-s-browser-compatibility) tells you to check each API, and Safari ignores APIs that it does not support. We checked the WebKit engine in Safari 27 on macOS 27. It has code for tabs, windows, scripting, storage and other APIs. It has no code for history.
-2. **The permission does nothing.** If an extension asks for `history` in Safari, Safari ignores the request. The Safari build of Morning Tab does not ask for it.
-3. **Morning Tab does not read Safari's history file.** Safari keeps your history in a file in your Library folder. macOS protects that folder. To read the file, an app needs **Full Disk Access**. That access lets an app read almost all of your files. Morning Tab does not ask for it, because that is too much access for a new tab page.
+2. **The permission does nothing.** If an extension asks for `history` in Safari, Safari ignores the request. The Safari build of Your Edition does not ask for it.
+3. **Your Edition does not read Safari's history file.** Safari keeps your history in a file in your Library folder. macOS protects that folder. To read the file, an app needs **Full Disk Access**. That access lets an app read almost all of your files. Your Edition does not ask for it, because that is too much access for a new tab page.
 
 Apple has not said publicly why Safari has no history API. Apple puts a strong focus on privacy, and that can be a reason. This is our guess, not a statement from Apple.
 
 ### Improve this tab: import your Safari history
 
-You can give Morning Tab your Safari history from before the install. The **Improve this tab** panel is on the first-build screen and in **⚙️ Settings**. It takes about 2 minutes:
+You can give Your Edition your Safari history from before the install. The **Improve this tab** panel is on the first-build screen and in **⚙️ Settings**. It takes about 2 minutes:
 
 1. In Safari, choose **File → Export Browsing Data to File…**.
 2. Select only **History**, then save the file.
-3. In Morning Tab, click **Import history…** and choose that file (`.zip` or `.json`).
+3. In Your Edition, click **Import history…** and choose that file (`.zip` or `.json`).
 
-- Morning Tab reads only `History.json` from the file. It never opens passwords or the other files in a Safari export.
+- Your Edition reads only `History.json` from the file. It never opens passwords or the other files in a Safari export.
 - It keeps visits from the last 30 days, in the visit log on your Mac.
-- Apple does not document this file format. Morning Tab reads the fields that Chromium's Safari importer also reads: `url`, `title`, `time_usec` and `visit_count`.
+- Apple does not document this file format. Your Edition reads the fields that Chromium's Safari importer also reads: `url`, `title`, `time_usec` and `visit_count`.
 - It also reads a Chrome history file from Google Takeout.
 
 **Export my visit log** saves the visit log as a JSON file. You can import that file again later, for example on another Mac.
 
-### What Morning Tab does instead
+### What Your Edition does instead
 
-Morning Tab records the pages you load in Safari from the day you install it. The code is in [`visit-log.ts`](apps/extension/lib/visit-log.ts).
+Your Edition records the pages you load in Safari from the day you install it. The code is in [`visit-log.ts`](apps/extension/lib/visit-log.ts).
 
 | The log does this | The log does not do this |
 | --- | --- |
 | Starts from the tabs you have open at install | Read the history Safari had before the install |
 | Counts each page you load | Count pages in private windows |
-| Deletes entries older than 30 days | Count the pages that Morning Tab opens for a build |
+| Deletes entries older than 30 days | Count the pages that Your Edition opens for a build |
 | Stays in the extension's storage on your Mac | Sync to iCloud or to other devices |
 
 For the first 3 days, the agent counts every site in the log, even sites with only one visit. After that, the agent ignores sites with fewer than 2 visits, the same as on Chrome.
 
 ### One more difference
 
-To read pages, Morning Tab opens a separate window. Chrome keeps that window behind your work. Safari can show it in front.
+To read pages, Your Edition opens a separate window. Chrome keeps that window behind your work. Safari can show it in front.
 
 ## Make it yours
 
-**The default look** is a broadsheet front page, like the image at the top of this page. It has a "The Morning Tab" masthead, cream paper and thin rules. It also has a lead story with a drop cap, and boxed side columns. It uses fonts that every Mac has: Bodoni 72 and Didot for headlines, Iowan Old Style for text. Morning Tab loads no web fonts, so opening a tab sends no request to a font service. To get a different look, describe it in **Instructions** (below).
+**The default look** is a broadsheet front page, like the image at the top of this page. It has a "Your Edition" masthead, cream paper and thin rules. It also has a lead story with a drop cap, and boxed side columns. It uses fonts that every Mac has: Bodoni 72 and Didot for headlines, Iowan Old Style for text. Your Edition loads no web fonts, so opening a tab sends no request to a font service. To get a different look, describe it in **Instructions** (below).
 
 Click **⚙️ Settings** on the new tab. It is also on the first-build screen, before your first homepage exists. There are 5 settings.
 
@@ -248,11 +248,11 @@ Click **Save & rebuild** to use them now.
 
 | Provider | What you enter |
 | --- | --- |
-| Anthropic | Only your **Anthropic API key**. Morning Tab always uses Claude Sonnet 5.5. |
+| Anthropic | Only your **Anthropic API key**. Your Edition always uses Claude Sonnet 5.5. |
 | BharatCode | Your BharatCode API key and the model: **qwen-3.8-27b** (default) or **deepseek-v4.1-flash** (needs the Pro plan). |
 
 - If no build is running, the new choice applies from your next build.
-- If a build is running, Morning Tab restarts it with the new provider or key. Pages read in the last 2 hours come from the page cache, so the restart does not open them again. Only the model's work starts over.
+- If a build is running, Your Edition restarts it with the new provider or key. Pages read in the last 2 hours come from the page cache, so the restart does not open them again. Only the model's work starts over.
 
 **4. Rebuild automatically each morning.** This setting is on by default.
 
@@ -281,12 +281,12 @@ With Anthropic, these steps run in a Claude Managed Agents session. With BharatC
 3. **`grep` / `read`**: the agent finds headlines, posts and links in those files.
 4. **`write`**: the agent writes one React component. The new tab shows it.
 
-There is no Morning Tab server. The extension's background worker talks to the provider directly. The two custom tools (`getHistory` and `getPageHtml`) always run in the extension, because they need the visit log and Safari's tabs.
+There is no Your Edition server. The extension's background worker talks to the provider directly. The two custom tools (`getHistory` and `getPageHtml`) always run in the extension, because they need the visit log and Safari's tabs.
 
 - **Anthropic:** the file tools run in the [Claude Managed Agents](https://docs.claude.com) sandbox. The sandbox has no shell access, because scraped pages are untrusted input.
 - **BharatCode:** the extension keeps the pages in memory and answers the file tools itself.
 
-The default look comes from a house style that Morning Tab adds to each build request. Your **Instructions** replace it.
+The default look comes from a house style that Your Edition adds to each build request. Your **Instructions** replace it.
 
 For the event flow, the layout and known issues, read **[ARCHITECTURE.md](./ARCHITECTURE.md)**.
 
@@ -319,7 +319,7 @@ Each push to `main` makes a new release automatically. The workflow is [`release
 
 1. GitHub tags the next patch version, for example `v0.1.0`, then `v0.1.1`.
 2. It builds the Safari and Chrome bundles on a standard Ubuntu runner.
-3. It publishes a [GitHub release](https://github.com/nijanthan-dev/morning-tab-safari/releases) with the 2 zip files and a `SHA256SUMS.txt` file.
+3. It publishes a [GitHub release](https://github.com/nijanthan-dev/your-edition-safari-new-tab/releases) with the 2 zip files and a `SHA256SUMS.txt` file.
 
 | To do this | Do this |
 | --- | --- |
@@ -331,12 +331,12 @@ The release does not contain the Mac app. To get the app, run `install:safari` (
 
 ## Status
 
-Morning Tab is early and experimental. It is a tool that you run yourself, with your own key.
+Your Edition is early and experimental. It is a tool that you run yourself, with your own key.
 
 Do not publish it to a store in its current form. Any person with access to your browser profile can read the stored API key.
 
 ## Credits and license
 
-Morning Tab uses the code of [AI Homepage](https://github.com/ThariqS/ai-newtab) by [Thariq Shihipar](https://github.com/ThariqS). Thank you, Thariq, for building it and for releasing it under MIT.
+Your Edition uses the code of [AI Homepage](https://github.com/ThariqS/ai-newtab) by [Thariq Shihipar](https://github.com/ThariqS). Thank you, Thariq, for building it and for releasing it under MIT.
 
 MIT. See [LICENSE](./LICENSE) and [NOTICE](./NOTICE).

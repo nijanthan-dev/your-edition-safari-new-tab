@@ -11,7 +11,7 @@ There is no server. The extension talks to one model provider that you choose: A
 | **Orchestration layer** | Anthropic | Runs the agent loop, persists the session event log, emits `agent.custom_tool_use` |
 | **Session sandbox** | Anthropic | Runs `read` / `grep` / `glob` / `write` over the mounted pages |
 | **Chat API** (BharatCode path) | The provider | Only the model. The worker runs the loop and answers every tool, file tools included, from memory |
-| **Morning Tab app** (Safari) | Your Mac | Carries the extension. Runs the on-device privacy filter over native messaging |
+| **Your Edition app** (Safari) | Your Mac | Carries the extension. Runs the on-device privacy filter over native messaging |
 
 The agent loop runs **in the service worker** (`apps/extension/lib/build-manager.ts`), so a build
 survives closing the tab, shows up in every open tab, and can run headless on a
@@ -108,8 +108,8 @@ apps/extension/           MV3 extension (WXT + React)
 scripts/install-safari.sh build the app in a temp folder, install one copy in ~/Applications
                           (signs with signing.local.env when present; git ignores that file)
 
-apps/safari/Morning Tab/  Xcode project: the Mac app that carries the extension
-  Morning Tab Extension/
+apps/safari/Your Edition/  Xcode project: the Mac app that carries the extension
+  Your Edition Extension/
     SafariWebExtensionHandler.swift  answers sendNativeMessage ("status", "summarize")
     PrivacyFilter.swift              Foundation Models session: one chunk in, items out
 
