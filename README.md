@@ -39,16 +39,22 @@ The install script keeps exactly one copy of the app. macOS registers every app 
 
 ### Optional: sign with your own certificate
 
-If you have an Apple Developer certificate, the install command can sign the app with it. Then Safari treats Morning Tab as a signed extension, so you do not need **Allow unsigned extensions**.
+If you have a **Developer ID Application** certificate, the install command can sign the app with it and have Apple notarize it. Then Safari treats Morning Tab as a trusted extension, so you do not need **Allow unsigned extensions**.
+
+Safari hides a Developer ID app that Apple has not notarized, even with **Allow unsigned extensions** on. So the script signs only when it can also notarize.
 
 1. Copy `signing.local.env.example` to `signing.local.env`.
-2. Run `security find-identity -v -p codesigning`. Copy the SHA-1 hash of your **Developer ID Application** or **Apple Development** certificate into `SIGN_IDENTITY`.
+2. Run `security find-identity -v -p codesigning`. Copy the SHA-1 hash of your **Developer ID Application** certificate into `SIGN_IDENTITY`.
 3. Copy the team ID, the code in brackets, into `TEAM_ID`.
-4. Run `npx pnpm@10.11.1 install:safari` again.
+4. Make an app-specific password at [account.apple.com](https://account.apple.com) (**Sign-In and Security → App-Specific Passwords**).
+5. Store it in your keychain. Run this command and paste the password when it asks:
+   `xcrun notarytool store-credentials morning-tab-notary --apple-id YOUR_APPLE_ID --team-id YOUR_TEAM_ID`
+6. Set `NOTARY_PROFILE=morning-tab-notary` in `signing.local.env`.
+7. Quit Safari. Run `npx pnpm@10.11.1 install:safari` again. Notarization adds 2 to 5 minutes.
 
 Git ignores `signing.local.env`, so your certificate and team ID stay on your Mac. The script also signs the app without the debugging entitlement (`get-task-allow`) that Xcode adds. It keeps the App Sandbox that Safari needs.
 
-The app is not notarized. That is not necessary for an app that you build on your own Mac. Do not share this build with other people.
+The password stays in your keychain. The script uses only the profile name.
 
 ### Part 2 of 2: Enable the extension in Safari (about 5 minutes)
 

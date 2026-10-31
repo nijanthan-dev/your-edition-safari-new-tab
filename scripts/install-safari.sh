@@ -16,7 +16,20 @@ BUILD_DIR=$(mktemp -d)
 # Optional: sign with your own certificate (see signing.local.env.example).
 SIGN_IDENTITY=""
 TEAM_ID=""
+NOTARY_PROFILE=""
 [ -f "$ROOT/signing.local.env" ] && . "$ROOT/signing.local.env"
+# Safari hides a Developer ID app that Apple has not notarized, even with
+# "Allow unsigned extensions" on. Without a way to notarize, stay ad hoc.
+if [ -n "$SIGN_IDENTITY" ] && [ -z "$NOTARY_PROFILE" ]; then
+  echo "signing.local.env has no NOTARY_PROFILE, so this build is ad hoc signed."
+  echo "Safari hides a Developer ID app until Apple notarizes it. See signing.local.env.example."
+  SIGN_IDENTITY=""
+fi
+if [ -n "$SIGN_IDENTITY" ] && ! xcrun notarytool history --keychain-profile "$NOTARY_PROFILE" >/dev/null 2>&1; then
+  echo "The keychain has no notary profile named \"$NOTARY_PROFILE\". Create it first:" >&2
+  echo "  xcrun notarytool store-credentials $NOTARY_PROFILE --apple-id YOUR_APPLE_ID --team-id $TEAM_ID" >&2
+  exit 1
+fi
 if [ -n "$SIGN_IDENTITY" ]; then
   echo "Signing with your certificate (team $TEAM_ID)."
   set -- CODE_SIGN_IDENTITY="$SIGN_IDENTITY" DEVELOPMENT_TEAM="$TEAM_ID" OTHER_CODE_SIGN_FLAGS=--timestamp
@@ -37,6 +50,21 @@ resign_without_debugging() {
       --entitlements "$entitlements" --sign "$SIGN_IDENTITY" "$bundle" 2>/dev/null
   done
   codesign --verify --deep --strict "$BUILT"
+}
+
+# Send the signed app to Apple's notary service, then attach the ticket.
+notarize() {
+  zip="$BUILD_DIR/notarize.zip"
+  ditto -c -k --keepParent "$BUILT" "$zip"
+  echo "Sending the app to Apple for notarization. This takes 2 to 5 minutes..."
+  result=$(xcrun notarytool submit "$zip" --keychain-profile "$NOTARY_PROFILE" --wait 2>&1) || true
+  if ! echo "$result" | grep -q "status: Accepted"; then
+    echo "$result" >&2
+    echo "Notarization failed. For details: xcrun notarytool log <id> --keychain-profile $NOTARY_PROFILE" >&2
+    exit 1
+  fi
+  xcrun stapler staple -q "$BUILT"
+  spctl --assess --type exec "$BUILT"
 }
 
 cleanup() {
@@ -69,7 +97,10 @@ xcodebuild -quiet \
   -derivedDataPath "$BUILD_DIR" \
   CODE_SIGN_STYLE=Manual "$@" \
   build
-[ -n "$SIGN_IDENTITY" ] && resign_without_debugging
+if [ -n "$SIGN_IDENTITY" ]; then
+  resign_without_debugging
+  notarize
+fi
 
 osascript -e "quit app \"$APP_NAME\"" 2>/dev/null || true
 mkdir -p "$HOME/Applications"
