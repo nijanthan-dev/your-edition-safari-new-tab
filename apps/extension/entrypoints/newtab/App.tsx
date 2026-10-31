@@ -6,6 +6,7 @@ import { toRenderable } from "@/lib/transpile";
 import { ApiKeySetup } from "./components/ApiKeySetup";
 import { BuildProgress } from "./components/BuildProgress";
 import { HomepagePreview } from "./components/HomepagePreview";
+import { PrivacyFilterOption } from "./components/PrivacyFilterOption";
 import { SettingsModal } from "./components/SettingsModal";
 import { btn, errorBox } from "./components/ui";
 import { useHomepageBuild } from "./useHomepageBuild";
@@ -113,6 +114,7 @@ export default function App() {
           The agent reads your browsing history, opens the pages you actually follow, and writes a
           homepage from what it finds today.
         </p>
+        <PrivacyFilterOption checked={privacyFilter} onChange={togglePrivacyFilter} />
         {state.error && (
           <div style={{ ...errorBox, margin: "16px 0", padding: 12, borderRadius: 4 }}>{state.error}</div>
         )}

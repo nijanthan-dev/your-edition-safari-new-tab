@@ -62,8 +62,9 @@ To find every copy that macOS knows about, run this command:
 ## Build your first homepage
 
 1. Open a new tab.
-2. Paste your Anthropic API key.
-3. Click **Build today's homepage**.
+2. Paste your Anthropic API key. Click **Save**.
+3. Optional: select **On-device privacy filter**. Do this before the first build if you want no page content to leave your Mac. The status line shows if Apple Intelligence is ready.
+4. Click **Build today's homepage**.
 
 The first build takes a few minutes. The progress view shows each step as the agent works.
 
@@ -84,7 +85,7 @@ Safari loads those pages with your sign-ins, so they can contain private content
 
 ### The on-device privacy filter (optional)
 
-The privacy filter is the main difference from the original extension. It is off by default. To turn it on, open **⚙️ Settings** and select **On-device privacy filter**.
+The privacy filter is the main difference from the original extension. It is off by default. You can turn it on before your first build, on the **Build your homepage** screen. After that, open **⚙️ Settings** and select **On-device privacy filter**.
 
 | | Filter off (default) | Filter on |
 | --- | --- | --- |
