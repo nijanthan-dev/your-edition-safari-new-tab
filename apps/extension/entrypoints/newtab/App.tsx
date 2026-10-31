@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { BHARATCODE, DEFAULT_BLOCKED_SITES } from "@homepage/agent-core";
 import { BUILD_STEPS } from "@/lib/protocol";
-import { KEYS, extensionStore, hasProviderKey, loadHomepage, loadSettings, saveSetting, type Provider, type Settings } from "@/lib/storage";
+import { KEYS, extensionStore, hasProviderKey, loadHomepage, loadSettings, saveProviderConfig, saveSetting, type Provider, type Settings } from "@/lib/storage";
 import { toRenderable } from "@/lib/transpile";
 import { ApiKeySetup } from "./components/ApiKeySetup";
 import { BuildProgress } from "./components/BuildProgress";
@@ -83,11 +83,12 @@ export default function App() {
   }, [applyProvider]);
 
   const saveKey = useCallback(async (provider: Provider, key: string, chatModel?: string) => {
-    await Promise.all([
-      saveSetting("provider", provider),
-      saveSetting(provider === "chat" ? "chatApiKey" : "apiKey", key),
-      chatModel ? saveSetting("chatModel", chatModel) : undefined,
-    ]);
+    const current = await loadSettings();
+    await saveProviderConfig({
+      ...current,
+      provider,
+      ...(provider === "chat" ? { chatApiKey: key, chatModel: chatModel ?? current.chatModel } : { apiKey: key }),
+    });
     applyProvider(await loadSettings(), await extensionStore.get<string>(KEYS.activeSessionId));
   }, [applyProvider]);
 

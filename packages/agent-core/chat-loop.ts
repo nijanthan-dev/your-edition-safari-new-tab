@@ -48,8 +48,14 @@ const READ_LINES = 300;
 const READ_MAX_CHARS = 30_000;
 const GREP_MAX_MATCHES = 80;
 const GREP_LINE_CHARS = 300;
+/**
+ * The API is stateless, so each turn resends the whole conversation. Once the
+ * model has replied to a tool result, a result longer than this is replaced by a
+ * short note: the pages stay in memory, and the model can read them again.
+ */
+const SEEN_RESULT_CHARS = 2_000;
 
-interface ChatMessage {
+export interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
   content: string | null;
   tool_calls?: ToolCall[];
@@ -214,6 +220,7 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
     if (signal?.aborted) throw new Error("Build cancelled");
     emit.phase("thinking");
     const reply = await post(messages);
+    shrinkSeen(messages);
     messages.push(reply);
     if (reply.content) {
       lastText = reply.content;
@@ -256,4 +263,28 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
     return { code: inline, sessionId: "", source: "message-fence" };
   }
   throw new Error(`The model produced no homepage. Expected a write to ${OUTPUT_PATH}. Last reply: ${lastText.slice(0, 300)}`);
+}
+
+/**
+ * Shorten what the model has already answered: long tool results, and the full
+ * component in an earlier write call. Short notes say where the text still is.
+ */
+export function shrinkSeen(messages: ChatMessage[]): void {
+  const toolNames = new Map<string, string>();
+  for (const message of messages) {
+    for (const call of message.tool_calls ?? []) {
+      toolNames.set(call.id, call.function.name);
+      if (call.function.name !== "write" || call.function.arguments.length <= SEEN_RESULT_CHARS) continue;
+      let path = OUTPUT_PATH;
+      try {
+        path = String(JSON.parse(call.function.arguments).path ?? OUTPUT_PATH);
+      } catch {}
+      const note = `[Shortened: ${call.function.arguments.length} characters, saved at ${path}. Call read to see it.]`;
+      call.function.arguments = JSON.stringify({ path, content: note });
+    }
+    if (message.role === "tool" && message.content && message.content.length > SEEN_RESULT_CHARS) {
+      const name = toolNames.get(message.tool_call_id ?? "") ?? "the tool";
+      message.content = `[Shortened: this ${name} result (${message.content.length} characters) was already read. The pages are still stored. Call ${name} again if you need it.]`;
+    }
+  }
 }

@@ -11,7 +11,16 @@ import {
   type BuildState,
   type PageMsg,
 } from "./protocol";
-import { KEYS, extensionStore, hasProviderKey, loadHomepage, loadSettings, saveHomepage } from "./storage";
+import {
+  KEYS,
+  extensionStore,
+  hasProviderKey,
+  loadHomepage,
+  loadSettings,
+  saveHomepage,
+  type ActiveBuild,
+  type Settings,
+} from "./storage";
 
 type Port = Parameters<Parameters<typeof browser.runtime.onConnect.addListener>[0]>[0];
 
@@ -21,8 +30,8 @@ type Port = Parameters<Parameters<typeof browser.runtime.onConnect.addListener>[
  * net that reattaches after an unexpected kill.
  */
 const KEEPALIVE_INTERVAL_MS = 20_000;
-/** Times a BharatCode build that Safari stopped is started again, before it gives up. */
-const MAX_CHAT_RESTARTS = 3;
+/** Times a build that Safari stopped is resumed or started again, before it gives up. */
+const MAX_RESTARTS = 3;
 
 /** Storage snapshots are throttled so narration deltas don't flood chrome.storage. */
 const SNAPSHOT_THROTTLE_MS = 2_000;
@@ -100,32 +109,26 @@ export class BuildManager {
       return;
     }
 
-    const sessionId = await extensionStore.get<string>(KEYS.activeSessionId);
-    if (sessionId) {
-      // Resume only while Anthropic is still the chosen provider. After a switch
-      // to BharatCode, delete the old session instead: the user's choice wins.
-      const { provider, apiKey } = await loadSettings();
-      if (provider === "anthropic") {
-        void this.startBuild({ resume: true });
-        return;
-      }
-      await this.discardAnthropicSession(sessionId, apiKey);
-    }
-
-    // A BharatCode build has no server session to resume. If the flag is still
-    // set, Safari stopped the worker mid-build: start it again. The page and
-    // filter caches make the restart continue where it stopped.
-    const chat = await extensionStore.get<{ attempts: number }>(KEYS.chatBuildActive);
-    if (chat) {
-      if (chat.attempts >= MAX_CHAT_RESTARTS) {
-        await extensionStore.remove(KEYS.chatBuildActive);
+    // A build this worker did not see end: Safari (or the browser) stopped it.
+    // An Anthropic session resumes from its event log; any other build starts
+    // again, and the page and filter caches make it continue where it stopped.
+    const [settings, sessionId, interrupted] = await Promise.all([
+      loadSettings(),
+      extensionStore.get<string>(KEYS.activeSessionId),
+      extensionStore.get<ActiveBuild>(KEYS.activeBuild),
+    ]);
+    const resumable = await this.dropStaleSession(settings, sessionId);
+    if (interrupted || resumable) {
+      const attempts = interrupted?.attempts ?? 0;
+      if (attempts >= MAX_RESTARTS) {
+        await extensionStore.remove(KEYS.activeBuild);
         const message = "Safari stopped the build several times. Keep a Morning Tab tab open, then try again.";
         this.state = { ...INITIAL_BUILD_STATE, phase: "error", error: message };
         this.broadcast({ kind: "error", message });
         await this.mirror(true);
         return;
       }
-      void this.startBuild({ chatAttempt: chat.attempts + 1 });
+      void this.startBuild({ resume: Boolean(resumable), attempt: attempts + 1 });
       return;
     }
 
@@ -162,6 +165,16 @@ export class BuildManager {
 
   // ---- the build -----------------------------------------------------------
 
+  /**
+   * The chosen provider always wins: a leftover Anthropic session is kept only
+   * while Anthropic is chosen. Otherwise it is deleted. Returns the session to resume.
+   */
+  private async dropStaleSession(settings: Settings, sessionId: string | undefined): Promise<string | undefined> {
+    if (!sessionId || settings.provider === "anthropic") return sessionId;
+    await this.discardAnthropicSession(sessionId, settings.apiKey);
+    return undefined;
+  }
+
   /** Delete a leftover Anthropic session and its uploads; clear the IDs even if that fails. */
   private async discardAnthropicSession(sessionId: string, apiKey: string | null) {
     console.log("[BuildManager] provider is not Anthropic — discarding the interrupted Anthropic session");
@@ -178,7 +191,7 @@ export class BuildManager {
     }
   }
 
-  async startBuild(opts: { resume?: boolean; chatAttempt?: number } = {}) {
+  async startBuild(opts: { resume?: boolean; attempt?: number } = {}) {
     if (this.running) {
       console.log("[BuildManager] startBuild ignored — a build is already running");
       return; // single-flight: a second start just attaches.
@@ -191,7 +204,7 @@ export class BuildManager {
     this.controller = new AbortController();
 
     try {
-      const [settings, leftover] = await Promise.all([
+      const [settings, storedSession] = await Promise.all([
         loadSettings(),
         extensionStore.get<string>(KEYS.activeSessionId),
       ]);
@@ -220,13 +233,12 @@ export class BuildManager {
         onLog: (line: string) => this.onLog(line),
       };
       const blockedSites = async () => (await loadSettings()).blockedSites;
-      // The chosen provider always wins. A resume request (an old tab's button)
-      // only applies to Anthropic; with BharatCode, drop the old session first.
-      if (settings.provider === "chat") {
-        if (leftover) await this.discardAnthropicSession(leftover, apiKey);
-        await extensionStore.set(KEYS.chatBuildActive, { attempts: opts.chatAttempt ?? 0 });
-        if (opts.chatAttempt) this.onLog(`Safari stopped the build; restarting (attempt ${opts.chatAttempt} of ${MAX_CHAT_RESTARTS})`);
-      }
+      // A resume request (an old tab's button) only applies to Anthropic; with
+      // another provider, the old session is deleted first.
+      const leftover = await this.dropStaleSession(settings, storedSession);
+      const record: ActiveBuild = { provider: settings.provider, attempts: opts.attempt ?? 0 };
+      await extensionStore.set(KEYS.activeBuild, record);
+      if (opts.attempt) this.onLog(`Safari stopped the build; continuing (attempt ${opts.attempt} of ${MAX_RESTARTS})`);
 
       // The key is the user's own, read from local storage — there is no server
       // to hide it behind. See ARCHITECTURE.md → Privacy.
@@ -280,8 +292,8 @@ export class BuildManager {
       this.controller = null;
       this.stopKeepalive();
       // Reached only when this worker saw the build end (done, failed or
-      // cancelled); a stopped worker never gets here and leaves the flag set.
-      await extensionStore.remove(KEYS.chatBuildActive);
+      // cancelled); a stopped worker never gets here and leaves the record set.
+      await extensionStore.remove(KEYS.activeBuild);
       if (this.restartPending) {
         this.restartPending = false;
         void this.startBuild();

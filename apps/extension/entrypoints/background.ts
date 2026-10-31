@@ -1,5 +1,6 @@
 import { BuildManager } from "@/lib/build-manager";
 import { AGENT_PORT } from "@/lib/protocol";
+import { USES_VISIT_LOG } from "@/lib/platform";
 import { KEYS } from "@/lib/storage";
 import type { PingRequest, VisitLogRequest } from "@/lib/protocol";
 import { exportVisits, importVisits, startVisitLog } from "@/lib/visit-log";
@@ -29,8 +30,10 @@ export default defineBackground(() => {
       sendResponse({ ok: true });
       return false;
     }
+    // The log exists only where there is no history API (see lib/platform.ts).
     const work =
-      msg?.kind === "importVisits" ? importVisits(msg.visits)
+      !USES_VISIT_LOG ? null
+      : msg?.kind === "importVisits" ? importVisits(msg.visits)
       : msg?.kind === "exportVisits" ? exportVisits()
       : null;
     if (!work) return false;
@@ -41,14 +44,10 @@ export default defineBackground(() => {
     return true; // the response is sent asynchronously
   });
 
-  // A new provider, key, base URL or model mid-build: restart with it. Debounced,
-  // because one change in Settings can write several keys.
-  const PROVIDER_KEYS: string[] = [KEYS.provider, KEYS.apiKey, KEYS.chatApiKey, KEYS.chatBaseUrl, KEYS.chatModel];
-  let restartTimer: ReturnType<typeof setTimeout> | undefined;
+  // A new provider, key, base URL or model mid-build: restart with it. Settings
+  // saves them as one object, so one Save is one change.
   browser.storage.onChanged.addListener((changes, area) => {
-    if (area !== "local" || !PROVIDER_KEYS.some((key) => key in changes)) return;
-    clearTimeout(restartTimer);
-    restartTimer = setTimeout(() => manager.restartIfRunning(), 1500);
+    if (area === "local" && KEYS.providerConfig in changes) manager.restartIfRunning();
   });
 
   browser.runtime.onConnect.addListener((port) => {

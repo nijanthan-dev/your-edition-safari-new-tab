@@ -2,6 +2,7 @@ import type { BrowserBridge, RawSiteMetadata, ScrapedPage } from "@homepage/agen
 import { getFiltered, putFiltered, type FilteredCache } from "./page-cache";
 import { chunk, cleanItems, MAX_CHUNKS, redact, renderFiltered, toDigest, type FilteredItem } from "./privacy-digest";
 import { extensionStore, KEYS } from "./storage";
+import { HAS_ON_DEVICE_MODEL } from "./platform";
 
 type ScrapeReport = Awaited<ReturnType<BrowserBridge["getPageHtml"]>>;
 
@@ -12,7 +13,7 @@ type ScrapeReport = Awaited<ReturnType<BrowserBridge["getPageHtml"]>>;
  * uploaded. Once on, it fails closed: when the model can't run, a page is
  * reported as failed and none of its content is sent.
  */
-export const PRIVACY_FILTER_SUPPORTED = import.meta.env.BROWSER === "safari";
+export const PRIVACY_FILTER_SUPPORTED = HAS_ON_DEVICE_MODEL;
 
 type NativeReply = { ok: true; items?: FilteredItem[] } | { ok: false; reason: string };
 

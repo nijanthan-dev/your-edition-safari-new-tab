@@ -2,6 +2,7 @@ import { useState } from "react";
 import { readHistoryFile } from "@/lib/history-import";
 import type { VisitLogRequest } from "@/lib/protocol";
 import { btn, btnSecondary } from "./ui";
+import { USES_VISIT_LOG } from "@/lib/platform";
 
 type Reply<T> = { ok: true; result: T } | { ok: false; error: string };
 
@@ -22,7 +23,7 @@ export function ImproveTabPanel() {
   const [status, setStatus] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (import.meta.env.BROWSER !== "safari") return null;
+  if (!USES_VISIT_LOG) return null;
 
   const importFile = async (file: File | undefined) => {
     if (!file) return;

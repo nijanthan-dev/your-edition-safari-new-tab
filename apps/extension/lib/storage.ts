@@ -19,11 +19,11 @@ export const KEYS = {
   autoRebuild: "autoRebuild",
   /** Safari only: send pages through the on-device privacy filter first. */
   privacyFilter: "privacyFilter",
-  /** "anthropic" (Managed Agents) or "chat" (an OpenAI-compatible API such as BharatCode). */
-  provider: "provider",
-  chatApiKey: "chatApiKey",
-  chatBaseUrl: "chatBaseUrl",
-  chatModel: "chatModel",
+  /**
+   * The provider, its keys, base URL and model, as one object (`ProviderConfig`).
+   * One Save writes it once, so the worker sees one change and restarts once.
+   */
+  providerConfig: "providerConfig",
   /** ISO timestamp of the last auto-build *attempted* (success or not). */
   lastAutoBuildAttempt: "lastAutoBuildAttempt",
   /** Throttled mirror of the live build state, for tabs that open while the worker sleeps. */
@@ -32,8 +32,11 @@ export const KEYS = {
   pageCache: "pageCache",
   /** On-device summaries of those pages, so a restart continues the privacy filter. */
   filteredCache: "filteredCache",
-  /** Set while a BharatCode build runs; lets a woken worker restart one Safari stopped. */
-  chatBuildActive: "chatBuildActive",
+  /**
+   * Set while any build runs, removed when this worker sees it end. If it is still
+   * set on wake, Safari stopped the worker mid-build: resume or restart it.
+   */
+  activeBuild: "activeBuild",
   /** Safari only: the extension's own log of page loads (lib/visit-log.ts). */
   visitLog: "visitLog",
 } as const;
@@ -45,18 +48,28 @@ export interface Homepage {
   timestamp: string;
 }
 
-export interface Settings {
+/** "anthropic" (Managed Agents) or "chat" (an OpenAI-compatible API such as BharatCode). */
+export interface ProviderConfig {
+  provider: Provider;
   apiKey: string | null;
+  chatApiKey: string | null;
+  chatBaseUrl: string;
+  chatModel: string;
+}
+
+/** A build in flight: which provider started it, and how often it was restarted. */
+export interface ActiveBuild {
+  provider: Provider;
+  attempts: number;
+}
+
+export interface Settings extends ProviderConfig {
   systemPrompt: string;
   blockedSites: string[];
   /** Unset means on — auto-rebuild is opt-out. */
   autoRebuild: boolean;
   /** Unset means off — the filter needs Apple Intelligence, which not every Mac has. */
   privacyFilter: boolean;
-  provider: Provider;
-  chatApiKey: string | null;
-  chatBaseUrl: string;
-  chatModel: string;
 }
 
 export type Provider = "anthropic" | "chat";
@@ -82,36 +95,49 @@ export const extensionStore: KVStore = {
   },
 };
 
+/** Keys from before `providerConfig`, read once so an upgrade keeps the user's keys. */
+const LEGACY_PROVIDER_KEYS = ["provider", "apiKey", "chatApiKey", "chatBaseUrl", "chatModel"] as const;
+
+function toProviderConfig(raw: Partial<Record<keyof ProviderConfig, unknown>>): ProviderConfig {
+  return {
+    provider: raw.provider === "chat" ? "chat" : "anthropic",
+    apiKey: (raw.apiKey as string | undefined) || null,
+    chatApiKey: (raw.chatApiKey as string | undefined) || null,
+    chatBaseUrl: (raw.chatBaseUrl as string | undefined) || BHARATCODE.baseUrl,
+    chatModel: (raw.chatModel as string | undefined) || BHARATCODE.models[0],
+  };
+}
+
 export async function loadSettings(): Promise<Settings> {
   const s = await browser.storage.local.get([
-    KEYS.apiKey,
     KEYS.systemPrompt,
     KEYS.blockedSites,
     KEYS.autoRebuild,
     KEYS.privacyFilter,
-    KEYS.provider,
-    KEYS.chatApiKey,
-    KEYS.chatBaseUrl,
-    KEYS.chatModel,
+    KEYS.providerConfig,
+    ...LEGACY_PROVIDER_KEYS,
   ]);
+  const stored = s[KEYS.providerConfig] as Partial<ProviderConfig> | undefined;
   return {
-    apiKey: (s[KEYS.apiKey] as string | undefined) ?? null,
+    ...toProviderConfig(stored ?? s),
     systemPrompt: (s[KEYS.systemPrompt] as string | undefined) ?? "",
     blockedSites: (s[KEYS.blockedSites] as string[] | undefined) ?? [...DEFAULT_BLOCKED_SITES],
     autoRebuild: s[KEYS.autoRebuild] !== false,
     privacyFilter: s[KEYS.privacyFilter] === true,
-    provider: s[KEYS.provider] === "chat" ? "chat" : "anthropic",
-    chatApiKey: (s[KEYS.chatApiKey] as string | undefined) ?? null,
-    chatBaseUrl: (s[KEYS.chatBaseUrl] as string | undefined) ?? BHARATCODE.baseUrl,
-    chatModel: (s[KEYS.chatModel] as string | undefined) ?? BHARATCODE.models[0],
   };
 }
 
-export async function saveSetting<K extends "apiKey" | "systemPrompt" | "blockedSites" | "autoRebuild" | "privacyFilter" | "provider" | "chatApiKey" | "chatBaseUrl" | "chatModel">(
+export async function saveSetting<K extends "systemPrompt" | "blockedSites" | "autoRebuild" | "privacyFilter">(
   key: K,
   value: Settings[K],
 ): Promise<void> {
   await browser.storage.local.set({ [KEYS[key]]: value });
+}
+
+/** Save the provider settings in one write, and drop the old separate keys. */
+export async function saveProviderConfig(config: ProviderConfig): Promise<void> {
+  await browser.storage.local.set({ [KEYS.providerConfig]: toProviderConfig(config) });
+  await browser.storage.local.remove([...LEGACY_PROVIDER_KEYS]);
 }
 
 export async function loadHomepage(): Promise<Homepage | undefined> {

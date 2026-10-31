@@ -1,5 +1,6 @@
 import { isPrivateAddress, type BrowserBridge, type ScrapedPage } from "@homepage/agent-core";
 import sanitizeHtml from "sanitize-html";
+import { HAS_WEB_REQUEST } from "./platform";
 
 type ScrapeReport = Awaited<ReturnType<BrowserBridge["getPageHtml"]>>;
 
@@ -36,12 +37,14 @@ const DEFAULT_OPTIONS: Required<Omit<ScrapeOptions, "onProgress">> = {
  */
 let apiAddress: string | undefined;
 // Safari's webRequest may be missing or report no address; then no address is reported.
-browser.webRequest?.onResponseStarted.addListener(
-  (details) => {
-    apiAddress = details.ip;
-  },
-  { urls: ["https://api.anthropic.com/*"], tabId: -1 },
-);
+if (HAS_WEB_REQUEST) {
+  browser.webRequest.onResponseStarted.addListener(
+    (details) => {
+      apiAddress = details.ip;
+    },
+    { urls: ["https://api.anthropic.com/*"], tabId: -1 },
+  );
+}
 
 /** Keep content and links; drop scripts, styles, attributes and empty wrappers. */
 function cleanHtmlForLLM(html: string) {
@@ -271,7 +274,7 @@ export async function scrapeUrls(
   const recordAddress = (details: { tabId: number; ip?: string }) => {
     addresses.set(details.tabId, details.ip);
   };
-  const direct = apiAddress !== undefined && !isPrivateAddress(apiAddress);
+  const direct = HAS_WEB_REQUEST && apiAddress !== undefined && !isPrivateAddress(apiAddress);
   if (direct) {
     browser.webRequest.onResponseStarted.addListener(recordAddress, {
       urls: ["http://*/*", "https://*/*"],
@@ -302,7 +305,7 @@ export async function scrapeUrls(
       else failed.push({ url, reason: "failed to load or extract within timeout" });
     });
   } finally {
-    browser.webRequest?.onResponseStarted.removeListener(recordAddress);
+    if (direct) browser.webRequest.onResponseStarted.removeListener(recordAddress);
     // Close the scraper window
     try {
       await browser.windows.remove(windowId);

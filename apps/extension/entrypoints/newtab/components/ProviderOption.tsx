@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { BHARATCODE } from "@homepage/agent-core";
-import { isAnthropicKey, loadSettings, saveSetting, type Provider } from "@/lib/storage";
-import { field, helpText as help } from "./ui";
+import { isAnthropicKey, loadSettings, saveProviderConfig, type Provider, type ProviderConfig } from "@/lib/storage";
+import { btn, field, helpText as help } from "./ui";
 
 /** BharatCode's models. Used on the setup screen and in Settings. */
 export function ChatModelSelect({ value, onChange }: { value: string; onChange: (model: string) => void }) {
@@ -26,92 +26,108 @@ export function ChatProviderNote() {
   );
 }
 
-/** The model provider and its key, base URL and model. Saved on each change. */
+/**
+ * The model provider and its key, base URL and model. Edits stay in a draft until
+ * Save, which writes them as one object, so a running build restarts once.
+ */
 export function ProviderOption() {
-  const [provider, setProvider] = useState<Provider>("anthropic");
-  const [baseUrl, setBaseUrl] = useState<string>(BHARATCODE.baseUrl);
-  const [model, setModel] = useState<string>(BHARATCODE.models[0]);
-  const [key, setKey] = useState("");
-  const [anthropicKey, setAnthropicKey] = useState("");
+  const [saved, setSaved] = useState<ProviderConfig | null>(null);
+  const [draft, setDraft] = useState<ProviderConfig | null>(null);
 
   useEffect(() => {
     void loadSettings().then((s) => {
-      setProvider(s.provider);
-      setBaseUrl(s.chatBaseUrl);
-      setModel(s.chatModel);
-      setKey(s.chatApiKey ?? "");
-      setAnthropicKey(s.apiKey ?? "");
+      const config = pickConfig(s);
+      setSaved(config);
+      setDraft(config);
     });
   }, []);
 
-  const isPreset = baseUrl === BHARATCODE.baseUrl;
-  const choose = (next: Provider) => {
-    setProvider(next);
-    void saveSetting("provider", next);
+  if (!draft) return null;
+  const set = (patch: Partial<ProviderConfig>) => setDraft({ ...draft, ...patch });
+  const isPreset = draft.chatBaseUrl === BHARATCODE.baseUrl;
+  const changed = JSON.stringify(draft) !== JSON.stringify(saved);
+  const problem =
+    draft.provider === "anthropic"
+      ? draft.apiKey && isAnthropicKey(draft.apiKey) ? null : "Enter an Anthropic API key (sk-ant-...)."
+      : draft.chatApiKey ? null : "Enter an API key for this provider.";
+
+  const save = async () => {
+    const next = { ...draft, chatBaseUrl: draft.chatBaseUrl.trim() || BHARATCODE.baseUrl, chatModel: draft.chatModel.trim() };
+    await saveProviderConfig(next);
+    setSaved(next);
+    setDraft(next);
   };
 
   return (
     <div style={{ marginTop: 16, color: "#333", fontSize: 14 }}>
       <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
         Model provider
-        <select value={provider} onChange={(e) => choose(e.target.value as Provider)} style={field}>
+        <select value={draft.provider} onChange={(e) => set({ provider: e.target.value as Provider })} style={field}>
           <option value="anthropic">Anthropic (Claude)</option>
           <option value="chat">BharatCode or another OpenAI-compatible API</option>
         </select>
       </label>
-      {provider === "anthropic" && (
+      {draft.provider === "anthropic" && (
         <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8 }}>
           Anthropic API key
           <input
             type="password"
-            value={anthropicKey}
+            value={draft.apiKey ?? ""}
             placeholder="sk-ant-..."
-            onChange={(e) => setAnthropicKey(e.target.value)}
-            onBlur={() => {
-              const next = anthropicKey.trim();
-              if (isAnthropicKey(next)) void saveSetting("apiKey", next);
-            }}
+            onChange={(e) => set({ apiKey: e.target.value.trim() || null })}
             style={{ ...field, flex: 1, fontFamily: "ui-monospace, monospace" }}
           />
         </label>
       )}
-      <p style={help}>
-        Changing the provider or a key during a build restarts the build with the new settings.
-        Pages read in the last 2 hours are reused, so the restart is quick.
-      </p>
-      {provider === "chat" && (
+      {draft.provider === "chat" && (
         <div style={{ display: "grid", gap: 8, marginTop: 8 }}>
           <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
             API key
             <input
               type="password"
-              value={key}
+              value={draft.chatApiKey ?? ""}
               placeholder="Your BharatCode API key"
-              onChange={(e) => setKey(e.target.value)}
-              onBlur={() => void saveSetting("chatApiKey", key.trim() || null)}
+              onChange={(e) => set({ chatApiKey: e.target.value.trim() || null })}
               style={{ ...field, flex: 1, fontFamily: "ui-monospace, monospace" }}
             />
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
             Model
             {isPreset ? (
-              <ChatModelSelect value={model} onChange={(m) => { setModel(m); void saveSetting("chatModel", m); }} />
+              <ChatModelSelect value={draft.chatModel} onChange={(chatModel) => set({ chatModel })} />
             ) : (
-              <input value={model} onChange={(e) => setModel(e.target.value)} onBlur={() => void saveSetting("chatModel", model.trim())} style={{ ...field, flex: 1 }} />
+              <input value={draft.chatModel} onChange={(e) => set({ chatModel: e.target.value })} style={{ ...field, flex: 1 }} />
             )}
           </label>
           <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
             Base URL
             <input
-              value={baseUrl}
-              onChange={(e) => setBaseUrl(e.target.value)}
-              onBlur={() => void saveSetting("chatBaseUrl", baseUrl.trim() || BHARATCODE.baseUrl)}
+              value={draft.chatBaseUrl}
+              onChange={(e) => set({ chatBaseUrl: e.target.value })}
               style={{ ...field, flex: 1, fontFamily: "ui-monospace, monospace", fontSize: 12 }}
             />
           </label>
           <ChatProviderNote />
         </div>
       )}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginTop: 8 }}>
+        <button style={{ ...btn, opacity: changed && !problem ? 1 : 0.5 }} disabled={!changed || Boolean(problem)} onClick={() => void save()}>
+          Save provider
+        </button>
+        <span style={{ color: "#888", fontSize: 12 }}>{changed ? problem ?? "Not saved yet." : "Saved."}</span>
+      </div>
+      <p style={help}>
+        Saving a new provider or key during a build restarts the build with the new settings.
+        Pages read in the last 2 hours are reused, so the restart is quick.
+      </p>
     </div>
   );
 }
+
+const pickConfig = ({ provider, apiKey, chatApiKey, chatBaseUrl, chatModel }: ProviderConfig): ProviderConfig => ({
+  provider,
+  apiKey,
+  chatApiKey,
+  chatBaseUrl,
+  chatModel,
+});

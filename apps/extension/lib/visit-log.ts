@@ -1,6 +1,7 @@
 import { EXPORT_FORMAT, type ImportedVisit } from "./history-import";
 import { isScraperTab } from "./scraper";
 import { extensionStore, KEYS } from "./storage";
+import { HAS_HISTORY_API, USES_VISIT_LOG } from "./platform";
 
 /**
  * Safari has no `history` API, so on Safari the extension keeps its own log of
@@ -27,8 +28,6 @@ const MAX_URLS = 5000;
 /** Page loads arrive in bursts; write the log once they settle. */
 const SAVE_DELAY_MS = 1000;
 
-/** Whether this browser has a real history API to read instead. */
-const hasHistoryApi = () => typeof browser.history?.search === "function";
 
 // Read once per worker lifetime, then kept in memory and written back after changes.
 let cached: Promise<VisitLog> | undefined;
@@ -125,7 +124,7 @@ export async function readVisits(
   startTime: number,
 ): Promise<{ items: VisitItem[]; daysCovered: number }> {
   const windowDays = (Date.now() - startTime) / DAY_MS;
-  if (hasHistoryApi()) {
+  if (HAS_HISTORY_API) {
     const items = await browser.history.search({ text: "", startTime, maxResults: 10_000 });
     return { items, daysCovered: windowDays };
   }
@@ -138,7 +137,7 @@ export async function readVisits(
 
 /** On browsers without a history API, log page loads (not the scraper's own tabs). */
 export function startVisitLog() {
-  if (hasHistoryApi()) return;
+  if (!USES_VISIT_LOG) return;
 
   browser.tabs.onUpdated.addListener((_tabId, changeInfo, tab) => {
     if (tab.incognito || isScraperTab(tab)) return;

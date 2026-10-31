@@ -137,6 +137,36 @@ describe("runHomepageBuildChat", () => {
   });
 });
 
+describe("shrinkSeen", () => {
+  test("shortens long results and earlier writes once the model has replied, and keeps the pages readable", async () => {
+    const big = "<p>" + "word ".repeat(2000) + "</p>";
+    const bridge: BrowserBridge = {
+      getHistory: async () => ({ sites: [], totalSitesSeen: 0 }),
+      getPageHtml: async ({ urls }) => ({ pages: urls.map((url) => ({ url, title: "T", html: big })), failed: [] }),
+    };
+    const longComponent = COMPONENT + "\n// " + "x".repeat(3000);
+    const { fetchFn, requests } = scriptedModel([
+      [{ name: "getPageHtml", args: { urls: ["https://news.example/"] } }],
+      [{ name: "read", args: { path: "/pages/news_example_0.html" } }],
+      [{ name: "write", args: { path: OUTPUT_PATH, content: longComponent } }],
+      [{ name: "read", args: { path: "/pages/news_example_0.html" } }],
+      "done",
+    ]);
+    const result = await runHomepageBuildChat({ baseUrl: "https://x.example/v1", apiKey: "k", model: "m", bridge, fetch: fetchFn });
+
+    expect(result.code).toBe(longComponent);
+    // Request 3 carries the first read in full: the model has not answered it yet.
+    const toolText = (n: number) => requests[n].body.messages.filter((m: any) => m.role === "tool").map((m: any) => m.content);
+    expect(toolText(2)[1]).toContain("word word");
+    // From request 4, that read is a short note, and the earlier write no longer carries the component.
+    expect(toolText(3)[1]).toStartWith("[Shortened: this read result");
+    const writeCall = requests[4].body.messages.flatMap((m: any) => m.tool_calls ?? []).find((c: any) => c.function.name === "write");
+    expect(JSON.parse(writeCall.function.arguments).content).toStartWith("[Shortened:");
+    // The page is still in memory, so a second read returns it in full.
+    expect(toolText(4)[3]).toContain("word word");
+  });
+});
+
 describe("toLines", () => {
   test("breaks sanitized HTML after block elements", () => {
     expect(toLines("<p>a</p><div>b</div><span>c</span>")).toBe("<p>a</p>\n<div>b</div>\n<span>c</span>");
