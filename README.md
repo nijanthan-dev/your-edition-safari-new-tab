@@ -35,6 +35,8 @@ You need:
 2. The last command builds the app, installs it in `~/Applications/Morning Tab.app` and opens it. You do not need to open Xcode.
 3. If Safari is open, the command asks you to quit Safari first. Safari 27 can crash if the command replaces the app while Safari is open.
 
+The app, its extension and the extension manifest all use one version: the latest release tag, for example `0.1.3`. Each install also gets a new build number (the date and time), so macOS and Safari never see two different builds with the same number.
+
 The install script keeps exactly one copy of the app. macOS registers every app that Xcode builds, and Safari shows one **Morning Tab** for each copy that it finds. So the script builds in a temporary folder, copies the app to `~/Applications`, then deletes the build copy.
 
 ### Optional: sign with your own certificate

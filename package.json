@@ -5,7 +5,7 @@
   "scripts": {
     "build": "pnpm --filter @homepage/extension build",
     "build:safari": "pnpm --filter @homepage/extension build:safari",
-    "install:safari": "pnpm build:safari && sh scripts/install-safari.sh",
+    "install:safari": "sh scripts/install-safari.sh",
     "dev": "pnpm --filter @homepage/extension dev",
     "typecheck": "pnpm -r typecheck",
     "test": "bun test harness/",
