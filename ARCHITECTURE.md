@@ -200,7 +200,9 @@ two extensions.
 look of `docs/preview.png`: Mac system fonts only (Bodoni 72 / Didot headlines, Iowan
 Old Style text), cream paper, a "Your Edition" masthead, a dateline that names the
 edition (morning, afternoon, evening or night) and three columns. It goes in the
-kickoff message, after the user's standing instructions, not in the system prompt. So
+kickoff message, after the user's standing instructions, not in the system prompt.
+It asks for every color as one set of CSS variables, switched together in one
+`prefers-color-scheme: dark` block, so text can never be dark on a dark panel. So
 both providers get it, the user's instructions can replace it, and the Managed Agents
 agent is not re-versioned. No web fonts are loaded, so a new tab makes no font request.
 

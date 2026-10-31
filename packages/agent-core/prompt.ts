@@ -124,9 +124,21 @@ external file.
 - Labels and metadata: -apple-system, "Helvetica Neue", sans-serif. Uppercase, 12px, letter-spacing 0.14em.
 - Dateline: the body serif with font-variant: small-caps.
 
-Colors. Paper #F2EEE6, ink #1B1A17, secondary text #6B655C, rules #1B1A17,
-side panels #E8E3D9, section labels #A3262A. In dark mode (prefers-color-scheme:
-dark): paper #1C1A17, ink #EDE6D8, panels #26231F, labels #E07A5F.
+Colors. Define every color one time, as CSS variables on :root, in a <style>
+element. Then override all of them together in one
+@media (prefers-color-scheme: dark) block:
+
+  :root { --paper: #F2EEE6; --ink: #1B1A17; --muted: #6B655C; --rule: #1B1A17;
+          --panel: #E8E3D9; --label: #A3262A; }
+  @media (prefers-color-scheme: dark) {
+    :root { --paper: #1C1A17; --ink: #EDE6D8; --muted: #A39B8E; --rule: #EDE6D8;
+            --panel: #26231F; --label: #E07A5F; } }
+
+Use only these variables for color: var(--ink) for all text, also inside panels
+and links; var(--muted) for metadata; var(--label) for section labels; var(--paper)
+for the page background; var(--panel) for panel backgrounds. Never write a hex
+color, rgb() or a color name anywhere else, and never set a color in only one
+mode. Text on a panel must use var(--ink), so it is readable in both modes.
 
 Layout, top to bottom. Max width 1240px, centered, 32px side padding.
 1. Top rail: three small label-style items on one line, left / center / right:
@@ -139,7 +151,10 @@ Layout, top to bottom. Max width 1240px, centered, 32px side padding.
    left the full date, center "{Morning|Afternoon|Evening|Night} Edition",
    right one short "desk" line taken from the scraped pages (never invent weather
    or events).
-4. Three columns (about 1.35fr 1fr 0.8fr, 48px gap); one column below 900px.
+4. Three columns (grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr)
+   minmax(0, 0.8fr), 48px gap); one column below 900px. Give every column
+   min-width: 0 and long words overflow-wrap: anywhere, so nothing is wider than
+   the window and the page never scrolls sideways.
    - Column 1, the lead story: section label, headline in the display font at
      about 64px, then two or three paragraphs of body text. The first paragraph
      starts with a drop cap: the first letter in the display font, about four

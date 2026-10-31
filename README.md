@@ -229,7 +229,7 @@ To read pages, Your Edition opens a separate window. Chrome keeps that window be
 
 ## Make it yours
 
-**The default look** is a broadsheet front page, like the image at the top of this page. It has a "Your Edition" masthead, cream paper, thin rules, a lead story with a drop cap, and boxed side columns. The dateline names the edition that you read: morning, afternoon, evening or night. Headlines use Bodoni 72 and Didot. Text uses Iowan Old Style. To get a different look, describe it in **Instructions** (below).
+**The default look** is a broadsheet front page, like the image at the top of this page. It has a "Your Edition" masthead, cream paper, thin rules, a lead story with a drop cap, and boxed side columns. The dateline names the edition that you read: morning, afternoon, evening or night. Headlines use Bodoni 72 and Didot. Text uses Iowan Old Style. It follows your Mac's light or dark appearance. To get a different look, describe it in **Instructions** (below).
 
 Click **⚙️ Settings** on the new tab. It is also on the first-build screen. There are 5 settings.
 
