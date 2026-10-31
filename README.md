@@ -13,7 +13,7 @@ Morning Tab replaces the Safari new tab page. An AI agent reads the sites you vi
 **Privacy option:** turn on the [on-device privacy filter](#the-on-device-privacy-filter-optional). Apple Intelligence then reads each page on your Mac, and only short summaries go to Anthropic.
 
 ![An example homepage in a morning-newspaper style](docs/preview.png)
-<sub>Illustration. The agent builds your homepage from your own browsing, so your stories will be different.</sub>
+<sub>Illustration of the default look. The agent builds your homepage from your own browsing, so your stories will be different.</sub>
 
 > **Credit.** Morning Tab is a Safari port of [**AI Homepage (ThariqS/ai-newtab)**](https://github.com/ThariqS/ai-newtab) by [Thariq Shihipar](https://github.com/ThariqS).
 > The agent, the new tab interface and the design are his work. This fork adds Safari support.
@@ -218,6 +218,8 @@ For the first 3 days, the agent counts every site in the log, even sites with on
 To read pages, Morning Tab opens a separate window. Chrome keeps that window behind your work. Safari can show it in front.
 
 ## Make it yours
+
+**The default look** is a broadsheet front page, like the image at the top of this page. It has a "The Morning Tab" masthead, cream paper and thin rules. It also has a lead story with a drop cap, and boxed side columns. It uses fonts that every Mac has: Bodoni 72 and Didot for headlines, Iowan Old Style for text. Morning Tab loads no web fonts, so opening a tab sends no request to a font service. To get a different look, describe it in **Instructions** (below).
 
 Click **⚙️ Settings** on the new tab. It is also on the first-build screen, before your first homepage exists. There are 5 settings.
 

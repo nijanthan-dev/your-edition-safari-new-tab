@@ -108,6 +108,57 @@ built and why. Do not paste the component source into your reply.`;
 
 export const HOMEPAGE_SYSTEM_PROMPT = buildSystemPrompt("sandbox");
 
+/**
+ * The default look: a broadsheet front page, as in docs/preview.png. It goes in
+ * the kickoff message (not the system prompt), so it applies to both providers
+ * and the user's standing instructions can replace it.
+ */
+export const HOUSE_STYLE = `## House style: a broadsheet front page
+
+Use this look unless the user's standing instructions describe a different one.
+
+Fonts. Use only fonts that are installed on a Mac. Do not load web fonts or any
+external file.
+- Display (masthead, headlines): "Bodoni 72", Didot, "Bodoni Moda", "Times New Roman", serif. Bold, tight line-height (1.02 to 1.1).
+- Body and secondary headlines: "Iowan Old Style", Charter, Georgia, serif. Body 18px, line-height 1.7.
+- Labels and metadata: -apple-system, "Helvetica Neue", sans-serif. Uppercase, 12px, letter-spacing 0.14em.
+- Dateline: the body serif with font-variant: small-caps.
+
+Colors. Paper #F2EEE6, ink #1B1A17, secondary text #6B655C, rules #1B1A17,
+side panels #E8E3D9, section labels #A3262A. In dark mode (prefers-color-scheme:
+dark): paper #1C1A17, ink #EDE6D8, panels #26231F, labels #E07A5F.
+
+Layout, top to bottom. Max width 1240px, centered, 32px side padding.
+1. Top rail: three small label-style items on one line, left / center / right:
+   "VOL. I · NO. {day of year}", "YOUR CORNER OF THE INTERNET", "PRICE: ONE OPEN TAB".
+   A 1px rule under it.
+2. Masthead: "The Morning Tab", centered, display font, bold, about 120px
+   (clamp(56px, 9vw, 128px)). Under it, centered, in italic body serif:
+   "All the news that fits your history." in curly quotes.
+3. Dateline bar between a double rule (top, 4px double) and a 2px rule (bottom):
+   left the full date, center "{Morning|Afternoon|Evening|Night} Edition",
+   right one short "desk" line taken from the scraped pages (never invent weather
+   or events).
+4. Three columns (about 1.35fr 1fr 0.8fr, 48px gap); one column below 900px.
+   - Column 1, the lead story: section label, headline in the display font at
+     about 64px, then two or three paragraphs of body text. The first paragraph
+     starts with a drop cap: the first letter in the display font, about four
+     lines tall, floated left.
+   - Column 2: section label, a second headline at about 40px, a one or two
+     sentence dek, a metadata line ("VIA HACKER NEWS · 512 POINTS"), then a list
+     of smaller items. Each item: a 20px bold serif headline and a metadata line,
+     with a 1px rule between items.
+   - Column 3: boxed panels (panel color, 1px ink border, 20px padding). Each
+     has a label-style heading with a 2px rule under it, then rows with the title
+     in serif on the left and a short value in the sans on the right, with thin
+     rules between rows. Fill them with real things from the pages: upcoming
+     dates, releases, counts, tools.
+5. More sections below in the same style, each with a section label and rules.
+
+Details. No card shadows, no rounded corners, no gradients, no emoji. Links use
+the text color with no underline, and underline on hover. Use images only when
+a scraped item genuinely has one.`;
+
 export interface KickoffInput {
   now: Date;
   userSystemPrompt?: string;
@@ -129,15 +180,21 @@ export function buildKickoffMessage({ now, userSystemPrompt }: KickoffInput): st
     day: "numeric",
   });
 
+  const startOfYear = new Date(now.getFullYear(), 0, 0);
+  const dayOfYear = Math.floor((now.getTime() - startOfYear.getTime()) / 86_400_000);
+
   return [
     `Build today's homepage.`,
     ``,
     `Context:`,
     `- Date: ${dateLine}`,
     `- Time of day: ${getTimeOfDay(now)}`,
+    `- Day of year: ${dayOfYear}`,
     userSystemPrompt?.trim()
       ? `\nThe user's standing instructions (these take priority over your defaults):\n${userSystemPrompt.trim()}`
       : ``,
+    ``,
+    `\n${HOUSE_STYLE}\n`,
     ``,
     `Start with getHistory, then scrape, then write ${OUTPUT_PATH}.`,
   ]
