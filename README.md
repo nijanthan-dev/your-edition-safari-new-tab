@@ -40,7 +40,7 @@ The install script keeps exactly one copy of the app. macOS registers every app 
 
 1. Open **Safari → Settings → Advanced**. Select **Show features for web developers**.
 2. Open **Develop → Developer Settings…**. Select **Allow unsigned extensions**.
-3. Open **Settings → Extensions**. Enable **Morning Tab**. Allow it on **All Websites**.
+3. Open **Settings → Extensions**. Enable **Morning Tab**. Click **Always Allow on Every Website…**. Morning Tab needs this access to reach the Anthropic API and to read your pages.
 4. Open **Settings → General**. Set **New tabs open with** to **Morning Tab**.
 
 > Safari clears **Allow unsigned extensions** each time Safari quits. After a restart, do step 2 again.
@@ -51,6 +51,7 @@ The install script keeps exactly one copy of the app. macOS registers every app 
 | --- | --- | --- |
 | **Morning Tab** is not in the extension list | **Allow unsigned extensions** is off, or Safari checked before the app was installed | Quit Safari (⌘Q). Open Safari. Do step 2 again. |
 | **Morning Tab** shows 2 or more times | macOS has more than one copy of the app, for example from **Run** in Xcode | Run `npx pnpm@10.11.1 install:safari`. Then delete any other copy of `Morning Tab.app`. |
+| "Connection error." or "has no website access" | Safari has not given Morning Tab website access. Morning Tab needs it to reach the Anthropic API and to read pages. | Click **Build today's homepage** and allow access in the prompt. Or open **Settings → Extensions → Morning Tab** and click **Always Allow on Every Website…**. |
 | The privacy filter status says "not available" | Apple Intelligence is off or still downloading | See [The on-device privacy filter](#the-on-device-privacy-filter-optional). |
 
 To find every copy that macOS knows about, run this command:

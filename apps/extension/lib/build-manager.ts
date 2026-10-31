@@ -2,6 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { runHomepageBuild, type RunPhase } from "@homepage/agent-core";
 import { shouldAutoRebuild } from "./auto-rebuild";
 import { browserBridge } from "./browser-bridge";
+import { explainBuildError } from "./host-access";
 import {
   INITIAL_BUILD_STATE,
   LOG_RETENTION,
@@ -195,7 +196,7 @@ export class BuildManager {
       await this.mirror(true);
       console.log("[BuildManager] build done", { bytes: result.code.length, source: result.source });
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = await explainBuildError(error);
       this.state = { ...this.state, running: false, phase: "error", error: message };
       this.broadcast({ kind: "error", message });
       await this.mirror(true);

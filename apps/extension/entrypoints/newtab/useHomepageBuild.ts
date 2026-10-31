@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { requestHostAccess } from "@/lib/host-access";
 import {
   AGENT_PORT,
   INITIAL_BUILD_STATE,
@@ -87,7 +88,11 @@ export function useHomepageBuild(onDone: (code: string) => void) {
   }, []);
 
   const build = useCallback((opts?: { resume?: boolean }) => {
-    portRef.current?.postMessage({ kind: "startBuild", resume: opts?.resume } satisfies PageMsg);
+    // Inside the click, so Safari can show its website-access prompt. The build
+    // starts either way; without access it ends with a message that says so.
+    void requestHostAccess().then(() =>
+      portRef.current?.postMessage({ kind: "startBuild", resume: opts?.resume } satisfies PageMsg),
+    );
     // Optimistic: flip to the build screen now; the worker's snapshot and
     // deltas take over from here.
     setState({ ...INITIAL_BUILD_STATE, running: true, phase: "setup" });
