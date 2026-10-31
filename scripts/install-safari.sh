@@ -34,7 +34,7 @@ resign_without_debugging() {
     codesign -d --entitlements :- "$bundle" > "$entitlements" 2>/dev/null
     /usr/libexec/PlistBuddy -c "Delete :com.apple.security.get-task-allow" "$entitlements" 2>/dev/null || true
     codesign --force --options runtime --timestamp \
-      --entitlements "$entitlements" --sign "$SIGN_IDENTITY" "$bundle"
+      --entitlements "$entitlements" --sign "$SIGN_IDENTITY" "$bundle" 2>/dev/null
   done
   codesign --verify --deep --strict "$BUILT"
 }

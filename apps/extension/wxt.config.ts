@@ -3,6 +3,19 @@ import { defineConfig } from "wxt";
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   modules: ["@wxt-dev/module-react"],
+  vite: () => ({
+    build: {
+      // The new tab page bundles React and the preview; one large chunk is expected.
+      chunkSizeWarningLimit: 2000,
+      rolldownOptions: {
+        onLog(level, log, handler) {
+          // The Anthropic SDK's Node-only credential helpers are never used in the browser.
+          if (log.message?.includes("has been externalized for browser compatibility")) return;
+          handler(level, log);
+        },
+      },
+    },
+  }),
   hooks: {
     // The scraper is injected at runtime, so WXT writes "content_scripts": [].
     // Chrome ignores the empty list; Safari rejects it as an invalid entry.
