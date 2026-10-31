@@ -68,20 +68,45 @@ Safari loads those pages with your sign-ins, so they can contain private content
 
 Your API key and the visit log stay in the extension's local storage on your Mac. Safari does not sync them. For more detail, read [ARCHITECTURE.md](./ARCHITECTURE.md#privacy).
 
-## How Safari is different
+## How Safari is different from Chrome
 
-Safari gives extensions **no access to your browsing history**. So Morning Tab keeps its own small log of the pages you load. The log starts when you install the extension. The code is in [`visit-log.ts`](apps/extension/lib/visit-log.ts).
+**Short version:** Chrome lets an extension read your browsing history. Safari does not. So Morning Tab on Safari keeps its own log of the pages you load, starting from the day you install it.
+
+### Chrome and Safari side by side
+
+| | Chrome | Safari |
+| --- | --- | --- |
+| Extension can read your past history | Yes, with the `history` permission | No. The `history` API does not exist in Safari. |
+| What the agent ranks | Your real Chrome history (14 days by default) | Morning Tab's own visit log (up to 30 days) |
+| First homepage | Full, from day one | Thin. It gets better over the first few days. |
+| Notification when a background build fails | Yes | No. The error shows in your next new tab. |
+| Install | Load the folder in `chrome://extensions` | Build a Mac app in Xcode. The app contains the extension. |
+| Unsigned extension | Works in Developer mode | Needs **Allow unsigned extensions**. Safari clears it each time Safari quits. |
+
+### Why Morning Tab cannot read your Safari history
+
+1. **Safari has no history API for extensions.** Chrome and Firefox give extensions `browser.history`. Safari does not. Apple's [browser compatibility guide](https://developer.apple.com/documentation/safariservices/assessing-your-safari-web-extension-s-browser-compatibility) tells you to check each API, and Safari ignores APIs that it does not support. We checked the WebKit engine in Safari 27 on macOS 27. It has code for tabs, windows, scripting, storage and other APIs. It has no code for history.
+2. **The permission does nothing.** If an extension asks for `history` in Safari, Safari ignores the request. The Safari build of Morning Tab does not ask for it.
+3. **Morning Tab does not read Safari's history file.** Safari keeps your history in a file in your Library folder. macOS protects that folder. To read the file, an app needs **Full Disk Access**. That access lets an app read almost all of your files. Morning Tab does not ask for it, because that is too much access for a new tab page.
+
+Apple has not said publicly why Safari has no history API. Apple puts a strong focus on privacy, and that can be a reason. This is our guess, not a statement from Apple.
+
+### What Morning Tab does instead
+
+Morning Tab records the pages you load in Safari from the day you install it. The code is in [`visit-log.ts`](apps/extension/lib/visit-log.ts).
 
 | The log does this | The log does not do this |
 | --- | --- |
 | Starts from the tabs you have open at install | Read the history Safari had before the install |
 | Counts each page you load | Count pages in private windows |
 | Deletes entries older than 30 days | Count the pages that Morning Tab opens for a build |
+| Stays in the extension's storage on your Mac | Sync to iCloud or to other devices |
 
-Two other differences:
+For the first 3 days, the agent counts every site in the log, even sites with only one visit. After that, the agent ignores sites with fewer than 2 visits, the same as on Chrome.
 
-- Safari has no extension notifications. If a background build fails, the error shows only in your next new tab.
-- To read pages, Morning Tab opens a separate window. Safari can show that window in front of your work.
+### One more difference
+
+To read pages, Morning Tab opens a separate window. Chrome keeps that window behind your work. Safari can show it in front.
 
 ## Make it yours
 
