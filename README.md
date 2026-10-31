@@ -329,7 +329,7 @@ Git ignores `signing.local.env`, so your certificate details stay on your Mac. T
 Each push to `main` makes a new release automatically. The workflow is [`release.yml`](.github/workflows/release.yml).
 
 1. It tags the next patch version, for example `v0.2.0`, then `v0.2.1`.
-2. On a GitHub macOS runner, it builds the app, signs it with a Developer ID certificate and has Apple notarize it.
+2. On a GitHub macOS runner, it builds the app, signs it and has Apple notarize it.
 3. It builds the Safari and Chrome bundles.
 4. It publishes a [GitHub release](https://github.com/nijanthan-dev/your-edition-safari-new-tab/releases) with the Mac app, the 2 bundles and a `SHA256SUMS.txt` file.
 
@@ -341,36 +341,7 @@ GitHub gives public repositories free minutes on its runners, so a release costs
 | Push without a release | Change only Markdown files or `docs/`. These pushes do not release. |
 | Release again without a change | Run the **Release** workflow by hand on the **Actions** tab. |
 
-### Signing secrets (for the maintainer)
-
-The certificate and the notary key are GitHub **encrypted secrets** in an environment named `release`. Nobody can read them from the repository, the logs or the release.
-
-- GitHub hides secret values in logs.
-- Workflows from fork pull requests do not get them.
-- The job puts the certificate in a temporary keychain and deletes it when the job ends.
-- The job uses only GitHub's own actions and Apple's tools.
-
-Without these secrets, the release has no Mac app. Everything else still releases. To set them up (about 20 minutes):
-
-1. In App Store Connect, open **Users and Access → Integrations → App Store Connect API**. Make a **Team key** with the **Developer** role. Download the `.p8` file. Note the key ID and the issuer ID.
-2. In Keychain Access, export your **Developer ID Application** certificate with its private key as a `.p12` file. Give it a password.
-3. In the repository, open **Settings → Environments**. Make an environment named `release`, and limit it to the `main` branch.
-4. Add the secrets in the table below to the `release` environment.
-5. Delete the `.p12` and `.p8` files from your Mac, or keep them in a safe place.
-
-| Secret | Value |
-| --- | --- |
-| `MACOS_CERT_P12_BASE64` | The output of `base64 -i cert.p12` |
-| `MACOS_CERT_PASSWORD` | The password of the `.p12` file |
-| `MACOS_SIGN_IDENTITY` | The SHA-1 hash of the certificate |
-| `APPLE_TEAM_ID` | Your team ID |
-| `ASC_API_KEY_P8_BASE64` | The output of `base64 -i AuthKey_XXXX.p8` |
-| `ASC_KEY_ID` | The key ID |
-| `ASC_ISSUER_ID` | The issuer ID |
-
-If a secret leaks, revoke the API key in App Store Connect. For the certificate, ask Apple to revoke it in your developer account.
-
-Anyone with write access to the repository can change the workflow and read the secrets. Give write access only to people that you trust.
+The maintainer signs and notarizes the Mac app with their own Developer ID. The certificate and the notary key are GitHub encrypted secrets. Nobody else can read them from the repository, the logs or the release, and workflows from fork pull requests do not get them.
 
 ## Status
 

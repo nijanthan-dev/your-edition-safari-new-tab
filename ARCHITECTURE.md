@@ -1,8 +1,8 @@
 # Architecture
 
-There is no server. The extension talks to one model provider that you choose: Anthropic
-(Claude Managed Agents, described first) or an OpenAI-compatible chat API such as BharatCode
-(see [Model providers](#privacy) under Privacy).
+There is no server. The extension talks to one model provider that you choose.
+The first is Anthropic (Claude Managed Agents, described first). The second is an
+OpenAI-compatible chat API such as BharatCode (see [Model providers](#privacy) under Privacy).
 
 | | Runs where | Does what |
 |---|---|---|
@@ -13,12 +13,12 @@ There is no server. The extension talks to one model provider that you choose: A
 | **Chat API** (BharatCode path) | The provider | Only the model. The worker runs the loop and answers every tool, file tools included, from memory |
 | **Your Edition app** (Safari) | Your Mac | Carries the extension. Runs the on-device privacy filter over native messaging |
 
-The agent loop runs **in the service worker** (`apps/extension/lib/build-manager.ts`), so a build
-survives closing the tab, shows up in every open tab, and can run headless on a
+The agent loop runs **in the service worker** (`apps/extension/lib/build-manager.ts`).
+So a build survives closing the tab, shows up in every open tab, and can run headless on a
 `chrome.alarms` schedule. The two custom tools execute in the extension too, because they
-need history (`chrome.history` on Chrome, the visit log on Safari) and `chrome.tabs`. Anthropic never executes them — it emits an event
-and waits for a `user.custom_tool_result` on the same authenticated stream. There is no
-inbound connection and no public endpoint.
+need history (`chrome.history` on Chrome, the visit log on Safari) and `chrome.tabs`.
+Anthropic never executes them. It emits an event and waits for a `user.custom_tool_result`
+on the same authenticated stream. There is no inbound connection and no public endpoint.
 
 ```
 service worker        Anthropic loop        sandbox
@@ -53,9 +53,9 @@ wall clock waiting on the model. Three things keep it alive or bring it back:
   the session's event log, re-answers any tool call left hanging, and finishes.
 - **The same heartbeat** drives scheduled rebuilds (`lib/auto-rebuild.ts`), so the
   first new tab of the day already shows a fresh homepage.
-- **In Safari**, open tabs also ping the worker every 10s during a build, and a
-  stopped BharatCode build restarts (see [Privacy](#privacy), "Keeping the worker
-  alive in Safari").
+- **In Safari**, open tabs also ping the worker every 10s during a build. A
+  stopped build resumes or starts again (see [Privacy](#privacy), "Keeping the
+  worker alive in Safari").
 
 ### Tabs are views
 
@@ -126,7 +126,7 @@ harness/                  Bun scripts: drive agent-core with a fixture/fetch bri
 
 | Command | Proves |
 |---|---|
-| `pnpm test` | 57 unit tests: history digest, blocked sites, auto-rebuild, stream reconnect, the chat loop, the privacy digest, history import, the page caches, the prompt and the house style, session discard, shortening seen chat results |
+| `pnpm test` | 59 unit tests. They cover the history digest, blocked sites, auto-rebuild and stream reconnect. They also cover the chat loop, the privacy digest, history import and the page caches. The rest cover the prompt, the house style (fonts, dark mode, columns), session discard and shortening seen chat results. |
 | `pnpm agent:run` | Full build against the real API: tools, mounting, sandbox grep/read, deliverable, cleanup |
 | `pnpm agent:verify` | The deliverable transforms, evaluates and server-renders |
 | `pnpm agent:resume-test` | A build killed with a tool call pending can be reattached and finished |
@@ -161,7 +161,7 @@ reason to skip the send. An unanswered tool call idles the session forever.
 **Don't break on `session.status_idle` alone.** The session idles every time it waits
 for a tool result. Break only on `status_terminated`, or on `status_idle` where
 `stop_reason.type !== "requires_action"`. And run the terminal check for *every* event,
-including deduped ones — `continue`-ing on a duplicate can skip the terminal event that
+including deduped ones. A `continue` on a duplicate can skip the terminal event that
 arrived in the history fetch.
 
 **`event_start` / `event_delta` stream events carry no `id`.** Skip them before dedupe.
@@ -170,11 +170,14 @@ arrived in the history fetch.
 
 ## Platform differences
 
-`lib/platform.ts` answers every Chrome-versus-Safari question once:
-`HAS_HISTORY_API` (a feature test), `USES_VISIT_LOG` (its opposite: the visit
-log, the import panel and the worker's import/export messages turn on
-together), `HAS_ON_DEVICE_MODEL` (the Safari build, which ships inside the Mac
-app) and `HAS_WEB_REQUEST`. No other file checks the browser itself.
+`lib/platform.ts` answers every Chrome-versus-Safari question once. No other file
+checks the browser itself.
+
+- `HAS_HISTORY_API`: a feature test.
+- `USES_VISIT_LOG`: its opposite. The visit log, the import panel and the worker's
+  import/export messages turn on together.
+- `HAS_ON_DEVICE_MODEL`: the Safari build, which ships inside the Mac app.
+- `HAS_WEB_REQUEST`: whether the `webRequest` API exists, for the private-address check.
 
 ## The name and the bundle ID
 
@@ -182,9 +185,9 @@ The project was called Morning Tab before version 0.2. The app, the extension
 and the repo now use Your Edition. The bundle ID stays
 `io.github.nijanthan-dev.morning-tab`.
 
-The plan was that the same bundle ID keeps the extension's storage. It did not:
-after the upgrade, Safari treated Your Edition as a new extension, and its
-storage was empty (no API keys, no visit log, no settings). Apple does not
+The plan was that the same bundle ID keeps the extension's storage. It did not.
+After the upgrade, Safari treated Your Edition as a new extension. Its storage
+was empty: no API keys, no visit log, no settings. Apple does not
 document what Safari uses to key that storage. So an upgrade from Morning Tab
 needs the key again, and the visit log starts again unless the user exported
 it first.
@@ -197,36 +200,41 @@ two extensions.
 ## The default look
 
 `HOUSE_STYLE` (`packages/agent-core/prompt.ts`) describes a broadsheet front page, the
-look of `docs/preview.png`: Mac system fonts only (Bodoni 72 / Didot headlines, Iowan
-Old Style text), cream paper, a "Your Edition" masthead, a dateline that names the
-edition (morning, afternoon, evening or night) and three columns. It goes in the
-kickoff message, after the user's standing instructions, not in the system prompt.
-It asks for every color as one set of CSS variables, switched together in one
-`prefers-color-scheme: dark` block, so text can never be dark on a dark panel. So
-both providers get it, the user's instructions can replace it, and the Managed Agents
-agent is not re-versioned. No web fonts are loaded, so a new tab makes no font request.
+look of `docs/preview.png`. It uses Mac system fonts only (Bodoni 72 / Didot headlines,
+Iowan Old Style text). It has cream paper, a "Your Edition" masthead, a dateline that
+names the edition (morning, afternoon, evening or night) and three columns.
+
+It goes in the kickoff message, after the user's standing instructions, not in the
+system prompt. So both providers receive it, the user's instructions can replace it, and
+the Managed Agents agent is not re-versioned. No web fonts are loaded, so a new tab
+makes no font request.
+
+It asks for every color as one set of CSS variables. One `prefers-color-scheme: dark`
+block switches them all together, so text can never be dark on a dark panel. The
+columns use `minmax(0, …)`, so a long word cannot make the page scroll sideways.
 
 ## Privacy
 
-The editable blocked-sites list is enforced in agent-core's tool handlers, not
-just the prompt: blocked domains are excluded from history digests and their
-counts, and blocked or non-HTTP(S) page requests never reach the browser bridge.
-Each scraped page's final URL is checked again before upload, so a redirect onto
-a blocked host is dropped: the browser still loads it, but nothing it read is
-sent. Loopback, private-IP and local-network hosts are always blocked, whatever
-the list says. A name can still resolve to a private address (`fritz.box`, an
-intranet name), so the scraper also records the address each page was served
-from (`webRequest`, observe only) and the page is dropped before upload when it is
-private. That address is only reported when the extension's own API requests
-connect to a public address; behind a proxy at a private address, or when Chrome
-reports no address, the name check is all there is. History digests still list
-such a domain. Subresource loads are not intercepted.
+Agent-core's tool handlers enforce the editable blocked-sites list, not only the
+prompt. Blocked domains are excluded from history digests and their counts.
+Blocked or non-HTTP(S) page requests never reach the browser bridge. Each scraped
+page's final URL is checked again before upload, so a redirect onto a blocked host
+is dropped. The browser still loads it, but nothing it read is sent. Loopback,
+private-IP and local-network hosts are always blocked, whatever the list says.
+
+A name can still resolve to a private address (`fritz.box`, an intranet name). So
+the scraper also records the address each page was served from (`webRequest`,
+observe only), and drops the page before upload when that address is private.
+That address is only reported when the extension's own API requests connect to a
+public address. Behind a proxy at a private address, or when the browser reports
+no address, the name check is all there is. History digests still list such a
+domain. Subresource loads are not intercepted.
 
 **The chosen provider always wins.** `BuildManager.dropStaleSession` is the one
-place that decides: a leftover Anthropic session is kept only while `provider`
-is "anthropic". Otherwise the worker calls `discardSession` (agent-core): it
-deletes the session's uploads and the session, then clears `activeSessionId`,
-so the old Anthropic build can never run again. `tick()` and `startBuild` both
+place that decides. It keeps a leftover Anthropic session only while `provider`
+is "anthropic". Otherwise the worker calls `discardSession` (agent-core). It
+deletes the session's uploads and the session, then clears `activeSessionId`.
+So the old Anthropic build can never run again. `tick()` and `startBuild` both
 call it. The new tab offers "Resume interrupted build" only for Anthropic.
 
 **Restarting on a provider change.** The provider, both keys, the base URL and
@@ -234,27 +242,27 @@ the model are one storage object (`providerConfig`), written once by **Save
 provider**. The worker watches `storage.onChanged` for that one key, so one
 Save is one restart, with no debounce. During a build it cancels quietly (no
 error is shown) and starts again with the new settings. `loadSettings` still
-reads the old separate keys when `providerConfig` is missing, and the first
-Save removes them, so an upgrade keeps the user's keys. The bridge
-keeps sanitized pages for 2 hours (`pageCache`), so the restart reuses them and
-only the model calls repeat. Cached pages still pass the blocked-site and
+reads the old separate keys when `providerConfig` is missing. The first Save
+deletes them, so an update keeps the user's keys. The bridge keeps sanitized
+pages for 2 hours (`pageCache`). So the restart reuses them, and only the model
+calls repeat. Cached pages still pass the blocked-site and
 private-address checks, and the privacy filter, because those run after the
 bridge.
 
 **Keeping the worker alive in Safari.** Safari stops a service worker that
-looks idle, and a native-message wait for the on-device model looks idle, so a
-build could stop mid-filter with the tab showing its last progress line. While
+looks idle, and a native-message wait for the on-device model looks idle. So a
+build could stop mid-filter, with the tab showing its last progress line. While
 a build runs, each open tab sends `{ kind: "ping" }` every 10 s
-(`PING_INTERVAL_MS`). If the worker is stopped anyway, a restart continues: the
+(`PING_INTERVAL_MS`). If the worker is stopped anyway, a restart continues. The
 filter's summaries are cached for 2 h (`filteredCache`, keyed by URL and a hash
 of the page). Every build writes an `activeBuild` record (`{ provider, attempts }`)
-when it starts and removes it when this worker sees it end. If `tick()` finds
-the record, Safari stopped the worker mid-build: an Anthropic session resumes
-from its event log, and any other build starts again from the caches. Both stop
+when it starts, and deletes it when this worker sees it end. If `tick()` finds
+the record, Safari stopped the worker mid-build. An Anthropic session resumes
+from its event log. Any other build starts again from the caches. Both stop
 after 3 attempts with a clear error.
 
 **Imported history (Safari).** The Improve this tab panel reads the file in the
-page and sends only the parsed visits to the worker (`runtime.sendMessage`),
+page. It sends only the parsed visits to the worker (`runtime.sendMessage`),
 because the worker owns the in-memory visit log and its delayed save. From a
 ZIP, fflate decompresses only `History.json`, so passwords and cards in a
 Safari export are never read. Visits older than 30 days are dropped, and the
@@ -262,26 +270,29 @@ log's start moves back to the oldest imported visit.
 
 **Model providers.** `provider` in storage picks the path. "anthropic" runs
 Managed Agents as described above. "chat" runs `runHomepageBuildChat` against
-`<chatBaseUrl>/chat/completions` (BharatCode by default): a non-streaming tool
-loop that resends the whole conversation each turn, keeps scraped pages in a
-`Map`, and answers listFiles / grep / read / write itself. Because each turn
-resends everything, `shrinkSeen` replaces tool results over 2,000 characters,
-and earlier `write` calls, with a short note once the model has replied to
-them. The pages stay in the `Map`, so the model can read them again. Both paths call
-`getHistoryDigest` and `loadAllowedPages`, so the blocked-sites list, the
-redirect recheck and the private-address check are identical. The chat path
-has no server-side session, so nothing needs deleting, but the provider's own
-retention applies (BharatCode's Free and Lite plans may log prompts). The
-system prompt comes from `buildSystemPrompt("local")`; the Managed Agents
-prompt is `buildSystemPrompt("sandbox")` and is byte-identical to before, so
-existing agents are not re-versioned.
+`<chatBaseUrl>/chat/completions` (BharatCode by default). It is a non-streaming
+tool loop. It resends the whole conversation each turn, keeps scraped pages in a
+`Map`, and answers listFiles / grep / read / write itself.
+
+Because each turn resends everything, `shrinkSeen` shortens what the model has
+already answered. It replaces tool results over 2,000 characters, and earlier
+`write` calls, with a short note. The pages stay in the `Map`, so the model can
+read them again.
+
+Both paths call `getHistoryDigest` and `loadAllowedPages`. So the blocked-sites
+list, the redirect recheck and the private-address check are identical. The chat
+path has no server-side session, so nothing needs deleting. The provider's own
+retention applies (BharatCode's Free and Lite plans may log prompts). The chat
+system prompt comes from `buildSystemPrompt("local")`. The Managed Agents prompt
+is `buildSystemPrompt("sandbox")`. It is byte-identical to before, so existing
+agents are not re-versioned.
 
 **On-device privacy filter (Safari, opt-in).** With the setting on, the bridge
 passes every scraped page through `filterPages` before agent-core sees it. The
-page becomes plain text with links replaced by `[n]` markers, split into chunks
-of at most 6,000 characters (3 per page, run one at a time; each native request
-times out after 2 minutes) to fit the on-device model's 4,096-token
-context. Each chunk goes over `runtime.sendNativeMessage` to
+page becomes plain text, with links replaced by `[n]` markers. The text is split
+into chunks of at most 6,000 characters, to fit the on-device model's 4,096-token
+context. There are at most 3 chunks per page, run one at a time. Each native
+request times out after 2 minutes. Each chunk goes over `runtime.sendNativeMessage` to
 `SafariWebExtensionHandler`, which runs a Foundation Models session with guided
 generation (`@Generable`) and returns `{ link, title, summary }` items. The model
 never writes a URL: items whose `link` is not a marker on the page are dropped,
@@ -289,16 +300,17 @@ and hrefs are taken from the page. Titles, summaries and history titles then pas
 a regex redaction (emails, phone numbers, long digit runs). The filter fails
 closed: if the model is unavailable or a request fails, the page is reported in
 `failed` and nothing from it is uploaded. The native handler logs only error
-types, never page text. Progress ("Privacy filter: page 2 of 3, part 1 of 3") reaches the
-activity log through the bridge's `onProgress` callback, which agent-core
-forwards as a `scraping` phase detail and a log line. Redaction is best effort; the blocked-sites list is still
-the hard control.
+types, never page text. Progress ("Privacy filter: page 2 of 3, part 1 of 3")
+reaches the activity log through the bridge's `onProgress` callback. Agent-core
+forwards it as a `scraping` phase detail and a log line. Redaction is best
+effort. The blocked-sites list is still the hard control.
 
 The session event log persists every domain, title and scraped page body server-side
 until deleted, and uploaded files persist independently. `runHomepageBuild` deletes
-both in a `finally`. Confirm retention/ZDR eligibility against current docs before
+both in a `finally`. Check retention/ZDR eligibility against current docs before
 distributing this.
 
-The API keys live in `chrome.storage.local`, readable by anyone with access to the
-browser profile. Fine for a tool you run yourself; **do not ship this to the Chrome Web
-Store or the Mac App Store** without moving the key behind a proxy.
+The API keys live in `chrome.storage.local`. Anyone with access to the browser
+profile can read them. That is fine for a tool you run yourself. **Do not ship
+this to the Chrome Web Store or the Mac App Store** without moving the key behind
+a proxy.
