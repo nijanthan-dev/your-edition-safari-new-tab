@@ -38,14 +38,20 @@ const DEFAULT_OPTIONS: Required<Omit<ScrapeOptions, "onProgress">> = {
  */
 let apiAddress: string | undefined;
 // Safari's webRequest may be missing or report no address; then no address is reported.
+// This runs when the worker loads, so a browser that rejects the listener must
+// not stop the worker: then no address is reported, as when webRequest is missing.
 if (HAS_WEB_REQUEST) {
-  browser.webRequest.onResponseStarted.addListener(
-    (details) => {
-      apiAddress = details.ip;
-    },
-    // tabId -1: the extension's own requests, so the model API of either provider.
-    { urls: ["https://*/*"], tabId: -1 },
-  );
+  try {
+    browser.webRequest.onResponseStarted.addListener(
+      (details) => {
+        apiAddress = details.ip;
+      },
+      // tabId -1: the extension's own requests, so the model API of either provider.
+      { urls: ["https://*/*"], tabId: -1 },
+    );
+  } catch (error) {
+    console.warn("[scraper] webRequest listener rejected; no address check", error);
+  }
 }
 
 /** Keep content and links; drop scripts, styles, attributes and empty wrappers. */
