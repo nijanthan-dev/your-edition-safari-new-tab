@@ -1,4 +1,4 @@
-# Morning Tab: an AI new tab page for Safari
+# Morning Tab: an AI new tab page for Safari, with an on-device privacy filter
 
 **Start here:** run these 3 commands, then do the Safari steps below. Setup takes about 10 minutes.
 
@@ -9,6 +9,8 @@ npx pnpm@10.11.1 install && npx pnpm@10.11.1 build:safari
 ```
 
 Morning Tab replaces the Safari new tab page. An AI agent reads the sites you visit and writes a new homepage for you each morning.
+
+**Privacy option:** turn on the [on-device privacy filter](#the-on-device-privacy-filter-optional). Apple Intelligence then reads each page on your Mac, and only short summaries go to Anthropic.
 
 ![An example homepage in a morning-newspaper style](docs/preview.png)
 <sub>Illustration. The agent builds your homepage from your own browsing, so your stories will be different.</sub>
