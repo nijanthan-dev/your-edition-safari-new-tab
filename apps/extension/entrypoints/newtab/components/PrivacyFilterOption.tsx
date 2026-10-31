@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { filterUnavailableReason, PRIVACY_FILTER_SUPPORTED } from "@/lib/privacy-filter";
+import { helpText } from "./ui";
 
 /**
  * The on-device privacy filter switch and its status (Safari only). Shown in
@@ -27,9 +28,9 @@ export function PrivacyFilterOption({
         <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
         On-device privacy filter
       </label>
-      <p style={{ color: "#888", fontSize: 12, margin: "6px 0 0" }}>
+      <p style={helpText}>
         When on, Apple Intelligence on this Mac summarizes each page and removes personal details.
-        Only the summaries go to Anthropic. If the on-device model can't run, pages are not sent.
+        Only the summaries go to your model provider. If the on-device model can't run, pages are not sent.
         <br />
         {problem === undefined
           ? "Checking the on-device model…"

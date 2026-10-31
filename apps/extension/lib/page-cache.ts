@@ -20,7 +20,7 @@ export function splitCached(cache: PageCache, urls: string[], now: number) {
   const misses: string[] = [];
   for (const url of urls) {
     const entry = cache[url];
-    if (entry && now - entry.at < PAGE_CACHE_TTL_MS) hits.push(entry.page);
+    if (entry && isFresh(entry.at, now)) hits.push(entry.page);
     else misses.push(url);
   }
   return { hits, misses };
@@ -47,26 +47,28 @@ export function hashText(text: string): string {
 
 export function getFiltered(cache: FilteredCache, url: string, rawHtml: string, now: number): string | undefined {
   const entry = cache[url];
-  return entry && entry.hash === hashText(rawHtml) && now - entry.at < PAGE_CACHE_TTL_MS ? entry.html : undefined;
+  return entry && entry.hash === hashText(rawHtml) && isFresh(entry.at, now) ? entry.html : undefined;
 }
 
 export function putFiltered(cache: FilteredCache, url: string, rawHtml: string, html: string, now: number): FilteredCache {
-  const next: FilteredCache = { ...cache, [url]: { hash: hashText(rawHtml), html, at: now } };
-  return Object.fromEntries(
-    Object.entries(next)
-      .filter(([, e]) => now - e.at < PAGE_CACHE_TTL_MS)
-      .sort((a, b) => b[1].at - a[1].at)
-      .slice(0, MAX_PAGES),
-  );
+  return keepNewest({ ...cache, [url]: { hash: hashText(rawHtml), html, at: now } }, now);
 }
 
 /** Add newly read pages, drop expired ones, and keep the newest MAX_PAGES. */
 export function updateCache(cache: PageCache, pages: ScrapedPage[], now: number): PageCache {
   const next: PageCache = { ...cache };
   for (const page of pages) next[page.url] = { page, at: now };
-  const fresh = Object.entries(next)
-    .filter(([, entry]) => now - entry.at < PAGE_CACHE_TTL_MS)
-    .sort((a, b) => b[1].at - a[1].at)
-    .slice(0, MAX_PAGES);
-  return Object.fromEntries(fresh);
+  return keepNewest(next, now);
+}
+
+const isFresh = (at: number, now: number) => now - at < PAGE_CACHE_TTL_MS;
+
+/** Drop expired entries and keep the newest MAX_PAGES. */
+function keepNewest<T extends { at: number }>(entries: Record<string, T>, now: number): Record<string, T> {
+  return Object.fromEntries(
+    Object.entries(entries)
+      .filter(([, e]) => isFresh(e.at, now))
+      .sort((a, b) => b[1].at - a[1].at)
+      .slice(0, MAX_PAGES),
+  );
 }

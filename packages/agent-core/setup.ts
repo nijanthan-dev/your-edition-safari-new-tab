@@ -3,16 +3,10 @@ import { HOMEPAGE_SYSTEM_PROMPT } from "./prompt";
 import { GET_HISTORY_SCHEMA, GET_PAGE_HTML_SCHEMA } from "./schemas";
 import type { KVStore } from "./types";
 
-/** Models offered in Settings. The first is the default. */
-export const MODEL_CHOICES = [
-  { id: "claude-sonnet-5-5", label: "Claude Sonnet 5.5" },
-  { id: "claude-haiku-5-5", label: "Claude Haiku 5.5" },
-  { id: "claude-opus-5-5", label: "Claude Opus 5.5" },
-] as const;
+/** The Anthropic path always uses this model; Settings offers no choice. */
+export const DEFAULT_MODEL = "claude-sonnet-5-5";
 
-export type HomepageModel = (typeof MODEL_CHOICES)[number]["id"];
-
-export const DEFAULT_MODEL: HomepageModel = "claude-sonnet-5-5";
+export type HomepageModel = typeof DEFAULT_MODEL;
 
 /**
  * An agent is pinned to its model, so each model gets its own cached agent.

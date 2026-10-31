@@ -76,7 +76,7 @@ function toVisit(entry: Record<string, unknown>): ImportedVisit | null {
 }
 
 /** One entry per URL: visits summed, the latest time and title kept. */
-export function mergeImported(visits: ImportedVisit[]): ImportedVisit[] {
+function mergeImported(visits: ImportedVisit[]): ImportedVisit[] {
   const byUrl = new Map<string, ImportedVisit>();
   for (const v of visits) {
     const seen = byUrl.get(v.url);

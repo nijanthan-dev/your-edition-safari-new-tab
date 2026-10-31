@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
-import { CHAT_PROVIDER_PRESETS } from "@homepage/agent-core";
-import { loadSettings, saveSetting, type Provider } from "@/lib/storage";
+import { BHARATCODE } from "@homepage/agent-core";
+import { isAnthropicKey, loadSettings, saveSetting, type Provider } from "@/lib/storage";
+import { field, helpText as help } from "./ui";
 
-const BHARATCODE = CHAT_PROVIDER_PRESETS[0];
-
-const field = { padding: "4px 8px", fontSize: 14, borderRadius: 4, border: "1px solid #ddd" } as const;
-const help = { color: "#888", fontSize: 12, margin: "6px 0 0" } as const;
+/** BharatCode's models. Used on the setup screen and in Settings. */
+export function ChatModelSelect({ value, onChange }: { value: string; onChange: (model: string) => void }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} style={field}>
+      {BHARATCODE.models.map((m) => (
+        <option key={m} value={m}>{m}</option>
+      ))}
+    </select>
+  );
+}
 
 /** Where page content goes when this provider is chosen. Shown wherever the choice is made. */
 export function ChatProviderNote() {
@@ -62,7 +69,7 @@ export function ProviderOption() {
             onChange={(e) => setAnthropicKey(e.target.value)}
             onBlur={() => {
               const next = anthropicKey.trim();
-              if (next.startsWith("sk-ant-")) void saveSetting("apiKey", next);
+              if (isAnthropicKey(next)) void saveSetting("apiKey", next);
             }}
             style={{ ...field, flex: 1, fontFamily: "ui-monospace, monospace" }}
           />
@@ -88,11 +95,7 @@ export function ProviderOption() {
           <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
             Model
             {isPreset ? (
-              <select value={model} onChange={(e) => { setModel(e.target.value); void saveSetting("chatModel", e.target.value); }} style={field}>
-                {BHARATCODE.models.map((m) => (
-                  <option key={m} value={m}>{m}</option>
-                ))}
-              </select>
+              <ChatModelSelect value={model} onChange={(m) => { setModel(m); void saveSetting("chatModel", m); }} />
             ) : (
               <input value={model} onChange={(e) => setModel(e.target.value)} onBlur={() => void saveSetting("chatModel", model.trim())} style={{ ...field, flex: 1 }} />
             )}

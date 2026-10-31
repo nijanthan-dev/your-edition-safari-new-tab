@@ -1,17 +1,15 @@
 import { useState } from "react";
-import { CHAT_PROVIDER_PRESETS } from "@homepage/agent-core";
-import type { Provider } from "@/lib/storage";
-import { ChatProviderNote } from "./ProviderOption";
+import { BHARATCODE } from "@homepage/agent-core";
+import { isAnthropicKey, type Provider } from "@/lib/storage";
+import { ChatModelSelect, ChatProviderNote } from "./ProviderOption";
 import { btn } from "./ui";
-
-const BHARATCODE_MODELS = CHAT_PROVIDER_PRESETS[0].models;
 
 export function ApiKeySetup({ onSave }: { onSave: (provider: Provider, key: string, chatModel?: string) => void }) {
   const [provider, setProvider] = useState<Provider>("anthropic");
-  const [chatModel, setChatModel] = useState<string>(BHARATCODE_MODELS[0]);
+  const [chatModel, setChatModel] = useState<string>(BHARATCODE.models[0]);
   const [value, setValue] = useState("");
   const key = value.trim();
-  const valid = provider === "anthropic" ? key.startsWith("sk-ant-") : key.length > 0;
+  const valid = provider === "anthropic" ? isAnthropicKey(key) : key.length > 0;
 
   return (
     <div style={{ maxWidth: 520, margin: "12vh auto", padding: 24, fontFamily: "system-ui" }}>
@@ -47,15 +45,7 @@ export function ApiKeySetup({ onSave }: { onSave: (provider: Provider, key: stri
         <>
           <label style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 12, fontSize: 14 }}>
             Model
-            <select
-              value={chatModel}
-              onChange={(e) => setChatModel(e.target.value)}
-              style={{ padding: "4px 8px", fontSize: 14, borderRadius: 4, border: "1px solid #ddd" }}
-            >
-              {BHARATCODE_MODELS.map((m) => (
-                <option key={m} value={m}>{m}</option>
-              ))}
-            </select>
+            <ChatModelSelect value={chatModel} onChange={setChatModel} />
           </label>
           <ChatProviderNote />
         </>

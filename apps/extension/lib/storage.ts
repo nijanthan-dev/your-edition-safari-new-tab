@@ -1,5 +1,5 @@
 import {
-  CHAT_PROVIDER_PRESETS,
+  BHARATCODE,
   DEFAULT_BLOCKED_SITES,
   STORAGE_KEYS as AGENT_KEYS,
   type KVStore,
@@ -61,7 +61,8 @@ export interface Settings {
 
 export type Provider = "anthropic" | "chat";
 
-const BHARATCODE = CHAT_PROVIDER_PRESETS[0];
+/** Anthropic keys start with this; the setup screen and Settings both check it. */
+export const isAnthropicKey = (key: string) => key.startsWith("sk-ant-");
 
 /** Whether the chosen provider has a key, so a build can start. */
 export const hasProviderKey = (s: Pick<Settings, "provider" | "apiKey" | "chatApiKey">) =>

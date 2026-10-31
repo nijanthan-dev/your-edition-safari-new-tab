@@ -9,21 +9,16 @@
  * safety check are the same functions the Anthropic path uses.
  */
 import { slugifyUrl } from "./history-digest";
-import { getHistoryDigest, loadAllowedPages, type Emit } from "./orchestrator";
+import { componentFromMessage, getHistoryDigest, loadAllowedPages, resolveBlockedSites, stripFence, toEmit } from "./orchestrator";
 import { OUTPUT_PATH, buildKickoffMessage, buildSystemPrompt } from "./prompt";
 import { GET_HISTORY_SCHEMA, GET_PAGE_HTML_SCHEMA } from "./schemas";
-import { DEFAULT_BLOCKED_SITES, normalizeBlockList } from "./site-filter";
 import type { BrowserBridge, HomepageBuildResult, RunCallbacks } from "./types";
 
-/** Providers offered in Settings. The user can also enter any other base URL. */
-export const CHAT_PROVIDER_PRESETS = [
-  {
-    id: "bharatcode",
-    label: "BharatCode",
-    baseUrl: "https://bharatcode.ai/api/model/v1",
-    models: ["qwen-3.8-27b", "deepseek-v4.1-flash"],
-  },
-] as const;
+/** The OpenAI-compatible provider offered in Settings. The user can also enter any other base URL. */
+export const BHARATCODE = {
+  baseUrl: "https://bharatcode.ai/api/model/v1",
+  models: ["qwen-3.8-27b", "deepseek-v4.1-flash"],
+} as const;
 
 export interface ChatRunOptions {
   /** e.g. https://bharatcode.ai/api/model/v1 — `/chat/completions` is appended. */
@@ -109,25 +104,14 @@ export function toLines(html: string): string {
   return html.replace(/(<\/(?:p|div|li|h[1-6]|tr|blockquote|pre|figure|table|ul|ol)>)/gi, "$1\n");
 }
 
-const CODE_FENCE = /```(?:tsx|jsx|ts|js|typescript|javascript)?\s*\n([\s\S]*?)```/;
-const stripFence = (text: string) => (text.match(CODE_FENCE)?.[1] ?? text).trim();
-
 export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<HomepageBuildResult> {
   const { callbacks, signal } = opts;
   const doFetch = opts.fetch ?? fetch;
-  const emit: Emit = {
-    phase: (p, d) => callbacks?.onPhase?.(p, d),
-    text: (t) => callbacks?.onText?.(t),
-    log: (l) => callbacks?.onLog?.(l),
-  };
+  const emit = toEmit(callbacks);
   const endpoint = `${opts.baseUrl.replace(/\/+$/, "")}/chat/completions`;
   const host = new URL(endpoint).host;
   const files = new Map<string, string>();
-  const blockedSites = async () =>
-    normalizeBlockList(
-      (typeof opts.blockedSites === "function" ? await opts.blockedSites() : opts.blockedSites) ??
-        DEFAULT_BLOCKED_SITES,
-    );
+  const blockedSites = () => resolveBlockedSites(opts.blockedSites);
 
   const tools: Record<string, (args: Record<string, unknown>) => Promise<string>> = {
     getHistory: async (args) =>
@@ -266,10 +250,10 @@ export async function runHomepageBuildChat(opts: ChatRunOptions): Promise<Homepa
     emit.phase("done");
     return { code: stripFence(written), sessionId: "", source: "session-output" };
   }
-  const fenced = lastText.match(CODE_FENCE);
-  if (fenced && fenced[1].includes("PersonalizedHomepage")) {
+  const inline = componentFromMessage(lastText);
+  if (inline) {
     emit.log("deliverable recovered from message fence");
-    return { code: fenced[1].trim(), sessionId: "", source: "message-fence" };
+    return { code: inline, sessionId: "", source: "message-fence" };
   }
   throw new Error(`The model produced no homepage. Expected a write to ${OUTPUT_PATH}. Last reply: ${lastText.slice(0, 300)}`);
 }

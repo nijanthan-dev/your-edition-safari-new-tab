@@ -195,7 +195,6 @@ export function buildKickoffMessage({ now, userSystemPrompt }: KickoffInput): st
       : ``,
     ``,
     `\n${HOUSE_STYLE}\n`,
-    ``,
     `Start with getHistory, then scrape, then write ${OUTPUT_PATH}.`,
   ]
     .filter(Boolean)

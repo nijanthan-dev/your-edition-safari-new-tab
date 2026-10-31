@@ -64,13 +64,13 @@ export async function filterPages(report: ScrapeReport, onProgress?: (detail: st
   const unavailable = report.pages.length ? await filterUnavailableReason() : null;
   const pages: ScrapedPage[] = [];
   const failed = [...report.failed];
+  let cache = (await extensionStore.get<FilteredCache>(KEYS.filteredCache)) ?? {};
   for (const [n, page] of report.pages.entries()) {
     if (unavailable) {
       failed.push({ url: page.url, reason: `not sent: the on-device privacy filter can't run (${unavailable})` });
       continue;
     }
     try {
-      const cache = (await extensionStore.get<FilteredCache>(KEYS.filteredCache)) ?? {};
       let html = getFiltered(cache, page.url, page.html, Date.now());
       if (html) {
         onProgress?.(`Privacy filter: page ${n + 1} of ${report.pages.length}, already summarized`);
@@ -78,7 +78,9 @@ export async function filterPages(report: ScrapeReport, onProgress?: (detail: st
         html = await filterPage(page, (part, parts) =>
           onProgress?.(`Privacy filter: page ${n + 1} of ${report.pages.length}, part ${part} of ${parts}`),
         );
-        await extensionStore.set(KEYS.filteredCache, putFiltered(cache, page.url, page.html, html, Date.now()));
+        // Saved after each page, so a stopped worker continues at the next one.
+        cache = putFiltered(cache, page.url, page.html, html, Date.now());
+        await extensionStore.set(KEYS.filteredCache, cache);
       }
       pages.push({ ...page, title: redact(page.title), html });
     } catch (error) {

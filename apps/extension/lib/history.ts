@@ -13,7 +13,6 @@ const YOUNG_LOG_DAYS = 3;
  */
 export async function getHistorySites(
   daysToAnalyze: number,
-  _maxResults: number,
 ): Promise<{ sites: RawSiteMetadata[]; totalSitesSeen: number }> {
   const { items, daysCovered } = await readVisits(Date.now() - daysToAnalyze * DAY_MS);
   // Average over the days actually logged, not the window asked for.

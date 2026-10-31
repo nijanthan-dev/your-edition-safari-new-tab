@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { readHistoryFile } from "@/lib/history-import";
 import type { VisitLogRequest } from "@/lib/protocol";
-import { btn } from "./ui";
+import { btn, btnSecondary } from "./ui";
 
 type Reply<T> = { ok: true; result: T } | { ok: false; error: string };
 
@@ -83,7 +83,7 @@ export function ImproveTabPanel() {
             }}
           />
         </label>
-        <button style={{ ...btn, backgroundColor: "white", color: "#333", border: "1px solid #ddd" }} onClick={() => void exportLog()}>
+        <button style={btnSecondary} onClick={() => void exportLog()}>
           Export my visit log
         </button>
       </div>

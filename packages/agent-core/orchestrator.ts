@@ -55,11 +55,7 @@ export interface RunOptions {
 
 export async function runHomepageBuild(opts: RunOptions): Promise<HomepageBuildResult> {
   const { client, bridge, store, callbacks, signal } = opts;
-  const emit: Emit = {
-    phase: (p, d) => callbacks?.onPhase?.(p, d),
-    text: (t) => callbacks?.onText?.(t),
-    log: (l) => callbacks?.onLog?.(l),
-  };
+  const emit = toEmit(callbacks);
 
   emit.phase("setup");
   const [agentId, environmentId] = await Promise.all([
@@ -103,13 +99,11 @@ export async function runHomepageBuild(opts: RunOptions): Promise<HomepageBuildR
 
   const runTool = async (event: CustomToolUse): Promise<{ is_error?: true; text: string }> => {
     try {
-      const blockedSites = normalizeBlockList(
-        (typeof opts.blockedSites === "function" ? await opts.blockedSites() : opts.blockedSites) ?? DEFAULT_BLOCKED_SITES,
-      );
+      const blockedSites = await resolveBlockedSites(opts.blockedSites);
       let result: GetHistoryResult | GetPageHtmlResult;
       switch (event.name) {
         case "getHistory":
-          result = await runGetHistory(event, bridge, emit, blockedSites);
+          result = await getHistoryDigest(event.input as { daysToAnalyze?: number; maxResults?: number }, bridge, emit, blockedSites);
           break;
         case "getPageHtml":
           result = await runGetPageHtml(event, { client, bridge, sessionId: sessionId!, rememberUpload, emit, blockedSites });
@@ -286,14 +280,9 @@ export async function runHomepageBuild(opts: RunOptions): Promise<HomepageBuildR
     // Privacy: the event log holds every domain, title and page body we sent,
     // and uploads persist independently of the session. Delete both, always.
     emit.phase("cleanup");
-    await Promise.allSettled(uploadedFileIds.map((id) => client.beta.files.delete(id)));
-    await store.remove(STORAGE_KEYS.uploadedFileIds);
-    if (sessionId) {
-      await deleteSessionWhenSettled(client, sessionId).catch((err) =>
-        emit.log(`session ${sessionId} was not deleted: ${String(err)}`),
-      );
-    }
-    await store.remove(STORAGE_KEYS.activeSessionId);
+    await discardSession(client, store, sessionId, (err) =>
+      emit.log(`session ${sessionId} was not deleted: ${String(err)}`),
+    );
   }
 }
 
@@ -302,11 +291,16 @@ export async function runHomepageBuild(opts: RunOptions): Promise<HomepageBuildR
  * uploaded, and forget both. For when the user switched provider, so the
  * session will never be resumed: its event log still holds the pages it was sent.
  */
-export async function discardSession(client: Anthropic, store: KVStore, sessionId: string): Promise<void> {
+export async function discardSession(
+  client: Anthropic,
+  store: KVStore,
+  sessionId: string,
+  onError: (err: unknown) => void = () => {},
+): Promise<void> {
   const uploaded = (await store.get<string[]>(STORAGE_KEYS.uploadedFileIds)) ?? [];
   await Promise.allSettled(uploaded.map((id) => client.beta.files.delete(id)));
   await store.remove(STORAGE_KEYS.uploadedFileIds);
-  await deleteSessionWhenSettled(client, sessionId).catch(() => {});
+  await deleteSessionWhenSettled(client, sessionId).catch(onError);
   await store.remove(STORAGE_KEYS.activeSessionId);
 }
 
@@ -320,14 +314,6 @@ function isTerminal(event: SessionEvent): boolean {
 // tool implementations
 // ---------------------------------------------------------------------------
 
-async function runGetHistory(
-  event: CustomToolUse,
-  bridge: BrowserBridge,
-  emit: Emit,
-  blockedSites: string[],
-): Promise<GetHistoryResult> {
-  return getHistoryDigest(event.input as { daysToAnalyze?: number; maxResults?: number }, bridge, emit, blockedSites);
-}
 
 /** The getHistory tool for any host: blocked domains are dropped, then the rest is narrowed. */
 export async function getHistoryDigest(
@@ -466,9 +452,27 @@ export async function loadAllowedPages(
 const CODE_FENCE = /```(?:tsx|jsx|ts|js|typescript|javascript)?\s*\n([\s\S]*?)```/;
 
 /** Strip a ```tsx fence, if the model wrapped the file contents in one. */
-function stripFence(text: string): string {
+export function stripFence(text: string): string {
   const fenced = text.match(CODE_FENCE);
   return (fenced ? fenced[1] : text).trim();
+}
+
+/** The component, when the model answered with it inline instead of writing it. */
+export function componentFromMessage(text: string): string | null {
+  const fenced = text.match(CODE_FENCE);
+  return fenced && fenced[1].includes("PersonalizedHomepage") ? fenced[1].trim() : null;
+}
+
+/** Callbacks → the emitter both runners use. */
+export const toEmit = (callbacks?: RunCallbacks): Emit => ({
+  phase: (p, d) => callbacks?.onPhase?.(p, d),
+  text: (t) => callbacks?.onText?.(t),
+  log: (l) => callbacks?.onLog?.(l),
+});
+
+/** The user's blocked-sites list, normalized, or the defaults. */
+export async function resolveBlockedSites(source?: string[] | (() => Promise<string[]>)): Promise<string[]> {
+  return normalizeBlockList((typeof source === "function" ? await source() : source) ?? DEFAULT_BLOCKED_SITES);
 }
 
 async function collectDeliverable(
@@ -500,10 +504,10 @@ async function collectDeliverable(
 
   // Fallback: the model sometimes answers with the component inline instead of
   // (or as well as) writing it. Better than failing the run outright.
-  const fenced = finalMessage.match(CODE_FENCE);
-  if (fenced && fenced[1].includes("PersonalizedHomepage")) {
+  const inline = componentFromMessage(finalMessage);
+  if (inline) {
     emit.log("deliverable recovered from message fence");
-    return { code: fenced[1].trim(), source: "message-fence" };
+    return { code: inline, source: "message-fence" };
   }
 
   throw new Error(

@@ -3,7 +3,7 @@ import { normalizeBlockList } from "@homepage/agent-core";
 import { ImproveTabPanel } from "./ImproveTabPanel";
 import { PrivacyFilterOption } from "./PrivacyFilterOption";
 import { ProviderOption } from "./ProviderOption";
-import { btn } from "./ui";
+import { btn, btnSecondary, helpText } from "./ui";
 
 export function SettingsModal({
   initialPrompt,
@@ -66,7 +66,7 @@ export function SettingsModal({
             style={{ width: "100%", boxSizing: "border-box", minHeight: 120, marginTop: 8, padding: 12, fontSize: 14, borderRadius: 4, border: "1px solid #ddd", fontFamily: "inherit" }}
           />
         </label>
-        <p id="blocked-sites-help" style={{ color: "#888", fontSize: 12, margin: "6px 0 0" }}>
+        <p id="blocked-sites-help" style={helpText}>
           One per line. Subdomains are included. Use *.example.com for wildcards.
         </p>
         <ProviderOption />
@@ -88,7 +88,7 @@ export function SettingsModal({
           />
           Rebuild automatically each morning
         </label>
-        <p style={{ color: "#888", fontSize: 12, margin: "6px 0 0" }}>
+        <p style={helpText}>
           When on, the extension builds one morning edition a day in the background (first time
           browser is open between 5am and noon), so your next tab shows a fresh one (uses your API key).
         </p>
@@ -97,7 +97,7 @@ export function SettingsModal({
         <div style={{ display: "flex", gap: 12, marginTop: 20, justifyContent: "flex-end" }}>
           <button
             onClick={onClose}
-            style={{ ...btn, backgroundColor: "white", color: "#333", border: "1px solid #ddd" }}
+            style={btnSecondary}
           >
             Cancel
           </button>

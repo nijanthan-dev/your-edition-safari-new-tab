@@ -104,11 +104,12 @@ export class BuildManager {
     if (sessionId) {
       // Resume only while Anthropic is still the chosen provider. After a switch
       // to BharatCode, delete the old session instead: the user's choice wins.
-      if ((await loadSettings()).provider === "anthropic") {
+      const { provider, apiKey } = await loadSettings();
+      if (provider === "anthropic") {
         void this.startBuild({ resume: true });
         return;
       }
-      await this.discardAnthropicSession(sessionId);
+      await this.discardAnthropicSession(sessionId, apiKey);
     }
 
     // A BharatCode build has no server session to resume. If the flag is still
@@ -162,14 +163,19 @@ export class BuildManager {
   // ---- the build -----------------------------------------------------------
 
   /** Delete a leftover Anthropic session and its uploads; clear the IDs even if that fails. */
-  private async discardAnthropicSession(sessionId: string) {
-    const { apiKey } = await loadSettings();
+  private async discardAnthropicSession(sessionId: string, apiKey: string | null) {
     console.log("[BuildManager] provider is not Anthropic — discarding the interrupted Anthropic session");
-    if (apiKey) {
-      await discardSession(new Anthropic({ apiKey, dangerouslyAllowBrowser: true }), extensionStore, sessionId).catch(() => {});
+    // discardSession clears both IDs; without a key (or if it fails), clear them here.
+    const discarded = apiKey
+      ? await discardSession(new Anthropic({ apiKey, dangerouslyAllowBrowser: true }), extensionStore, sessionId).then(
+          () => true,
+          () => false,
+        )
+      : false;
+    if (!discarded) {
+      await extensionStore.remove(KEYS.activeSessionId);
+      await extensionStore.remove(KEYS.uploadedFileIds);
     }
-    await extensionStore.remove(KEYS.activeSessionId);
-    await extensionStore.remove(KEYS.uploadedFileIds);
   }
 
   async startBuild(opts: { resume?: boolean; chatAttempt?: number } = {}) {
@@ -185,7 +191,10 @@ export class BuildManager {
     this.controller = new AbortController();
 
     try {
-      const settings = await loadSettings();
+      const [settings, leftover] = await Promise.all([
+        loadSettings(),
+        extensionStore.get<string>(KEYS.activeSessionId),
+      ]);
       const { apiKey, systemPrompt } = settings;
       if (!hasProviderKey(settings)) {
         // Manual builds are gated behind the key-setup screen and auto-builds
@@ -213,9 +222,8 @@ export class BuildManager {
       const blockedSites = async () => (await loadSettings()).blockedSites;
       // The chosen provider always wins. A resume request (an old tab's button)
       // only applies to Anthropic; with BharatCode, drop the old session first.
-      const leftover = await extensionStore.get<string>(KEYS.activeSessionId);
-      if (settings.provider === "chat" && leftover) await this.discardAnthropicSession(leftover);
       if (settings.provider === "chat") {
+        if (leftover) await this.discardAnthropicSession(leftover, apiKey);
         await extensionStore.set(KEYS.chatBuildActive, { attempts: opts.chatAttempt ?? 0 });
         if (opts.chatAttempt) this.onLog(`Safari stopped the build; restarting (attempt ${opts.chatAttempt} of ${MAX_CHAT_RESTARTS})`);
       }
@@ -243,7 +251,7 @@ export class BuildManager {
               blockedSites,
               // Anthropic always uses the default Claude model; there is no model choice.
               model: DEFAULT_MODEL,
-              resumeSessionId: opts.resume ? await extensionStore.get<string>(KEYS.activeSessionId) : undefined,
+              resumeSessionId: opts.resume ? leftover : undefined,
               signal: this.controller.signal,
               callbacks,
             });

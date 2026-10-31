@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import { DEFAULT_BLOCKED_SITES } from "@homepage/agent-core";
+import { BHARATCODE, DEFAULT_BLOCKED_SITES } from "@homepage/agent-core";
 import { BUILD_STEPS } from "@/lib/protocol";
 import { KEYS, extensionStore, hasProviderKey, loadHomepage, loadSettings, saveSetting, type Provider, type Settings } from "@/lib/storage";
 import { toRenderable } from "@/lib/transpile";
@@ -9,7 +9,7 @@ import { HomepagePreview } from "./components/HomepagePreview";
 import { ImproveTabPanel } from "./components/ImproveTabPanel";
 import { PrivacyFilterOption } from "./components/PrivacyFilterOption";
 import { SettingsModal } from "./components/SettingsModal";
-import { btn, errorBox } from "./components/ui";
+import { btn, btnSecondary, errorBox } from "./components/ui";
 import { useHomepageBuild } from "./useHomepageBuild";
 
 const hostOf = (url: string) => {
@@ -22,7 +22,7 @@ const hostOf = (url: string) => {
 
 const describeProvider = (s: Settings) =>
   s.provider === "chat"
-    ? `${s.chatBaseUrl.includes("bharatcode.ai") ? "BharatCode" : hostOf(s.chatBaseUrl)}, ${s.chatModel}`
+    ? `${s.chatBaseUrl === BHARATCODE.baseUrl ? "BharatCode" : hostOf(s.chatBaseUrl)}, ${s.chatModel}`
     : "Anthropic (Claude)";
 
 export default function App() {
@@ -47,6 +47,14 @@ export default function App() {
 
   const { state, build, cancel } = useHomepageBuild((code) => setRenderedCode(toRenderable(code)));
 
+  /** The provider line, the key gate and the resume offer all follow the saved provider. */
+  const applyProvider = useCallback((settings: Settings, activeSession?: string) => {
+    setProviderLabel(describeProvider(settings));
+    setConnected(hasProviderKey(settings));
+    // Only an Anthropic build can be resumed; never offer it after a switch to BharatCode.
+    setResumable(settings.provider === "anthropic" ? (activeSession ?? null) : null);
+  }, []);
+
   // Once a build finishes, drop back to the homepage view.
   useEffect(() => {
     if (!state.running) setViewProgress(false);
@@ -62,20 +70,17 @@ export default function App() {
           loadHomepage(),
           extensionStore.get<string>(KEYS.activeSessionId),
         ]);
-        setConnected(hasProviderKey(settings));
+        applyProvider(settings, activeSession);
         setSystemPrompt(settings.systemPrompt);
         setBlockedSites(settings.blockedSites);
         setAutoRebuild(settings.autoRebuild);
         setPrivacyFilter(settings.privacyFilter);
-        setProviderLabel(describeProvider(settings));
-        // Only an Anthropic build can be resumed; never offer it after a switch to BharatCode.
-        setResumable(settings.provider === "anthropic" ? (activeSession ?? null) : null);
         if (homepage?.code) setRenderedCode(toRenderable(homepage.code));
       } finally {
         setLoading(false);
       }
     })();
-  }, []);
+  }, [applyProvider]);
 
   const saveKey = useCallback(async (provider: Provider, key: string, chatModel?: string) => {
     await Promise.all([
@@ -83,19 +88,18 @@ export default function App() {
       saveSetting(provider === "chat" ? "chatApiKey" : "apiKey", key),
       chatModel ? saveSetting("chatModel", chatModel) : undefined,
     ]);
-    setProviderLabel(describeProvider(await loadSettings()));
-    setConnected(true);
-  }, []);
+    applyProvider(await loadSettings(), await extensionStore.get<string>(KEYS.activeSessionId));
+  }, [applyProvider]);
 
   // Settings saves the provider and keys itself; re-read them for the provider line.
   const closeSettings = useCallback(async () => {
     setShowSettings(false);
-    const settings = await loadSettings();
-    setProviderLabel(describeProvider(settings));
-    setConnected(hasProviderKey(settings));
-    const activeSession = await extensionStore.get<string>(KEYS.activeSessionId);
-    setResumable(settings.provider === "anthropic" ? (activeSession ?? null) : null);
-  }, []);
+    const [settings, activeSession] = await Promise.all([
+      loadSettings(),
+      extensionStore.get<string>(KEYS.activeSessionId),
+    ]);
+    applyProvider(settings, activeSession);
+  }, [applyProvider]);
 
   const savePrompt = useCallback(
     async (prompt: string, sites: string[]) => {
@@ -173,7 +177,7 @@ export default function App() {
           <button style={btn} onClick={() => build()}>
             Build today&apos;s homepage
           </button>
-          <button style={{ ...btn, backgroundColor: "white", color: "#333", border: "1px solid #ddd" }} onClick={() => setShowSettings(true)}>
+          <button style={btnSecondary} onClick={() => setShowSettings(true)}>
             ⚙️ Settings
           </button>
           {resumable && (

@@ -17,7 +17,8 @@ async function readPages(urls: string[], loadDelayMs?: number, onProgress?: (det
   const fresh = misses.length
     ? await scrapeUrls(misses, { loadDelay: loadDelayMs, onProgress })
     : { pages: [], failed: [] };
-  await extensionStore.set(KEYS.pageCache, updateCache(cache, fresh.pages, now));
+  // The cache holds whole pages, so write it only when there is something new.
+  if (fresh.pages.length) await extensionStore.set(KEYS.pageCache, updateCache(cache, fresh.pages, now));
   return { pages: [...hits, ...fresh.pages], failed: fresh.failed };
 }
 
@@ -27,8 +28,8 @@ async function readPages(urls: string[], loadDelayMs?: number, onProgress?: (det
  * With the on-device privacy filter on (Safari), both pass through it first.
  */
 export const browserBridge: BrowserBridge = {
-  getHistory: async ({ daysToAnalyze, maxResults }) => {
-    const history = await getHistorySites(daysToAnalyze, maxResults);
+  getHistory: async ({ daysToAnalyze }) => {
+    const history = await getHistorySites(daysToAnalyze);
     return (await filterOn()) ? { ...history, sites: redactSites(history.sites) } : history;
   },
   getPageHtml: async ({ urls, loadDelayMs, onProgress }) => {
