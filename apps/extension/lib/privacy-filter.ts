@@ -1,5 +1,7 @@
 import type { BrowserBridge, RawSiteMetadata, ScrapedPage } from "@homepage/agent-core";
+import { getFiltered, putFiltered, type FilteredCache } from "./page-cache";
 import { chunk, cleanItems, MAX_CHUNKS, redact, renderFiltered, toDigest, type FilteredItem } from "./privacy-digest";
+import { extensionStore, KEYS } from "./storage";
 
 type ScrapeReport = Awaited<ReturnType<BrowserBridge["getPageHtml"]>>;
 
@@ -68,9 +70,16 @@ export async function filterPages(report: ScrapeReport, onProgress?: (detail: st
       continue;
     }
     try {
-      const html = await filterPage(page, (part, parts) =>
-        onProgress?.(`Privacy filter: page ${n + 1} of ${report.pages.length}, part ${part} of ${parts}`),
-      );
+      const cache = (await extensionStore.get<FilteredCache>(KEYS.filteredCache)) ?? {};
+      let html = getFiltered(cache, page.url, page.html, Date.now());
+      if (html) {
+        onProgress?.(`Privacy filter: page ${n + 1} of ${report.pages.length}, already summarized`);
+      } else {
+        html = await filterPage(page, (part, parts) =>
+          onProgress?.(`Privacy filter: page ${n + 1} of ${report.pages.length}, part ${part} of ${parts}`),
+        );
+        await extensionStore.set(KEYS.filteredCache, putFiltered(cache, page.url, page.html, html, Date.now()));
+      }
       pages.push({ ...page, title: redact(page.title), html });
     } catch (error) {
       failed.push({ url: page.url, reason: `not sent: the on-device privacy filter failed (${String(error)})` });

@@ -30,6 +30,10 @@ export const KEYS = {
   buildSnapshot: "buildSnapshot",
   /** Pages read in the last 2 hours, reused when a build restarts (lib/page-cache.ts). */
   pageCache: "pageCache",
+  /** On-device summaries of those pages, so a restart continues the privacy filter. */
+  filteredCache: "filteredCache",
+  /** Set while a BharatCode build runs; lets a woken worker restart one Safari stopped. */
+  chatBuildActive: "chatBuildActive",
   /** Safari only: the extension's own log of page loads (lib/visit-log.ts). */
   visitLog: "visitLog",
 } as const;

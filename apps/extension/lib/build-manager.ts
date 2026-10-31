@@ -21,6 +21,8 @@ type Port = Parameters<Parameters<typeof browser.runtime.onConnect.addListener>[
  * net that reattaches after an unexpected kill.
  */
 const KEEPALIVE_INTERVAL_MS = 20_000;
+/** Times a BharatCode build that Safari stopped is started again, before it gives up. */
+const MAX_CHAT_RESTARTS = 3;
 
 /** Storage snapshots are throttled so narration deltas don't flood chrome.storage. */
 const SNAPSHOT_THROTTLE_MS = 2_000;
@@ -104,6 +106,23 @@ export class BuildManager {
       return;
     }
 
+    // A BharatCode build has no server session to resume. If the flag is still
+    // set, Safari stopped the worker mid-build: start it again. The page and
+    // filter caches make the restart continue where it stopped.
+    const chat = await extensionStore.get<{ attempts: number }>(KEYS.chatBuildActive);
+    if (chat) {
+      if (chat.attempts >= MAX_CHAT_RESTARTS) {
+        await extensionStore.remove(KEYS.chatBuildActive);
+        const message = "Safari stopped the build several times. Keep a Morning Tab tab open, then try again.";
+        this.state = { ...INITIAL_BUILD_STATE, phase: "error", error: message };
+        this.broadcast({ kind: "error", message });
+        await this.mirror(true);
+        return;
+      }
+      void this.startBuild({ chatAttempt: chat.attempts + 1 });
+      return;
+    }
+
     await this.maybeAutoRebuild();
   }
 
@@ -137,7 +156,7 @@ export class BuildManager {
 
   // ---- the build -----------------------------------------------------------
 
-  async startBuild(opts: { resume?: boolean } = {}) {
+  async startBuild(opts: { resume?: boolean; chatAttempt?: number } = {}) {
     if (this.running) {
       console.log("[BuildManager] startBuild ignored — a build is already running");
       return; // single-flight: a second start just attaches.
@@ -176,6 +195,10 @@ export class BuildManager {
         onLog: (line: string) => this.onLog(line),
       };
       const blockedSites = async () => (await loadSettings()).blockedSites;
+      if (settings.provider === "chat") {
+        await extensionStore.set(KEYS.chatBuildActive, { attempts: opts.chatAttempt ?? 0 });
+        if (opts.chatAttempt) this.onLog(`Safari stopped the build; restarting (attempt ${opts.chatAttempt} of ${MAX_CHAT_RESTARTS})`);
+      }
 
       // The key is the user's own, read from local storage — there is no server
       // to hide it behind. See ARCHITECTURE.md → Privacy.
@@ -228,6 +251,9 @@ export class BuildManager {
       this.running = false;
       this.controller = null;
       this.stopKeepalive();
+      // Reached only when this worker saw the build end (done, failed or
+      // cancelled); a stopped worker never gets here and leaves the flag set.
+      await extensionStore.remove(KEYS.chatBuildActive);
       if (this.restartPending) {
         this.restartPending = false;
         void this.startBuild();

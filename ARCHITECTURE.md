@@ -176,6 +176,15 @@ only the model calls repeat. Cached pages still pass the blocked-site and
 private-address checks, and the privacy filter, because those run after the
 bridge.
 
+**Keeping the worker alive in Safari.** Safari stops a service worker that
+looks idle, and a native-message wait for the on-device model looks idle, so a
+build could stop mid-filter with the tab showing its last progress line. While
+a build runs, each open tab sends `{ kind: "ping" }` every 10 s
+(`PING_INTERVAL_MS`). If the worker is stopped anyway, a restart continues: the
+filter's summaries are cached for 2 h (`filteredCache`, keyed by URL and a hash
+of the page), Anthropic sessions resume as before, and a BharatCode build left
+`chatBuildActive` set, which `tick()` uses to start it again (at most 3 times).
+
 **Imported history (Safari).** The Improve this tab panel reads the file in the
 page and sends only the parsed visits to the worker (`runtime.sendMessage`),
 because the worker owns the in-memory visit log and its delayed save. From a

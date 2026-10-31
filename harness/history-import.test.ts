@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { strToU8, zipSync } from "../apps/extension/node_modules/fflate";
 import { EXPORT_FORMAT, parseHistoryJson, readHistoryFile } from "../apps/extension/lib/history-import";
-import { PAGE_CACHE_TTL_MS, splitCached, updateCache } from "../apps/extension/lib/page-cache";
+import { PAGE_CACHE_TTL_MS, getFiltered, hashText, putFiltered, splitCached, updateCache } from "../apps/extension/lib/page-cache";
 
 const T = 1_793_000_000_000; // a fixed time in ms
 const usec = (ms: number) => ms * 1000;
@@ -80,5 +80,20 @@ describe("page cache", () => {
     const many = updateCache(old, Array.from({ length: 20 }, (_, i) => page(`https://p${i}.example/`)), T + PAGE_CACHE_TTL_MS);
     expect(Object.keys(many)).toHaveLength(16);
     expect(many["https://old.example/"]).toBeUndefined();
+  });
+});
+
+describe("filtered-page cache", () => {
+  test("reuses a summary only for the same page content, within 2 hours", () => {
+    const cache = putFiltered({}, "https://a.example/", "<p>raw</p>", "<ul>summary</ul>", T);
+    expect(getFiltered(cache, "https://a.example/", "<p>raw</p>", T + 60_000)).toBe("<ul>summary</ul>");
+    expect(getFiltered(cache, "https://a.example/", "<p>changed</p>", T + 60_000)).toBeUndefined();
+    expect(getFiltered(cache, "https://a.example/", "<p>raw</p>", T + PAGE_CACHE_TTL_MS)).toBeUndefined();
+    expect(getFiltered(cache, "https://b.example/", "<p>raw</p>", T)).toBeUndefined();
+  });
+
+  test("hashes are stable and differ for different text", () => {
+    expect(hashText("abc")).toBe(hashText("abc"));
+    expect(hashText("abc")).not.toBe(hashText("abd"));
   });
 });

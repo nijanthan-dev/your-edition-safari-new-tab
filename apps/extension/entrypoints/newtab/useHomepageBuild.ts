@@ -3,10 +3,12 @@ import { requestHostAccess } from "@/lib/host-access";
 import {
   AGENT_PORT,
   INITIAL_BUILD_STATE,
+  PING_INTERVAL_MS,
   LOG_RETENTION,
   type BuildMsg,
   type BuildState,
   type PageMsg,
+  type PingRequest,
 } from "@/lib/protocol";
 import { KEYS, extensionStore } from "@/lib/storage";
 
@@ -86,6 +88,15 @@ export function useHomepageBuild(onDone: (code: string) => void) {
       portRef.current = null;
     };
   }, []);
+
+  // Keep the worker awake while a build runs (see PingRequest).
+  useEffect(() => {
+    if (!state.running) return;
+    const timer = setInterval(() => {
+      browser.runtime.sendMessage({ kind: "ping" } satisfies PingRequest).catch(() => {});
+    }, PING_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [state.running]);
 
   const build = useCallback((opts?: { resume?: boolean }) => {
     // Inside the click, so Safari can show its website-access prompt. The build

@@ -1,7 +1,7 @@
 import { BuildManager } from "@/lib/build-manager";
 import { AGENT_PORT } from "@/lib/protocol";
 import { KEYS } from "@/lib/storage";
-import type { VisitLogRequest } from "@/lib/protocol";
+import type { PingRequest, VisitLogRequest } from "@/lib/protocol";
 import { exportVisits, importVisits, startVisitLog } from "@/lib/visit-log";
 
 /**
@@ -24,7 +24,11 @@ export default defineBackground(() => {
 
   // The worker owns the log (it caches and saves it), so pages import and export through it.
   browser.runtime.onMessage.addListener((raw: unknown, _sender, sendResponse) => {
-    const msg = raw as VisitLogRequest;
+    const msg = raw as VisitLogRequest | PingRequest;
+    if (msg?.kind === "ping") {
+      sendResponse({ ok: true });
+      return false;
+    }
     const work =
       msg?.kind === "importVisits" ? importVisits(msg.visits)
       : msg?.kind === "exportVisits" ? exportVisits()

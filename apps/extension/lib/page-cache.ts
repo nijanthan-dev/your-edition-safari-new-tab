@@ -26,6 +26,40 @@ export function splitCached(cache: PageCache, urls: string[], now: number) {
   return { hits, misses };
 }
 
+/**
+ * Pages the on-device privacy filter already summarized, keyed by URL with a
+ * hash of the page they came from. A restarted build reuses them, so the filter
+ * continues at the next page instead of starting again.
+ */
+export interface FilteredCache {
+  [url: string]: { hash: string; html: string; at: number };
+}
+
+/** FNV-1a: a cheap fingerprint, so a changed page is filtered again. */
+export function hashText(text: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i++) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  return (h >>> 0).toString(16);
+}
+
+export function getFiltered(cache: FilteredCache, url: string, rawHtml: string, now: number): string | undefined {
+  const entry = cache[url];
+  return entry && entry.hash === hashText(rawHtml) && now - entry.at < PAGE_CACHE_TTL_MS ? entry.html : undefined;
+}
+
+export function putFiltered(cache: FilteredCache, url: string, rawHtml: string, html: string, now: number): FilteredCache {
+  const next: FilteredCache = { ...cache, [url]: { hash: hashText(rawHtml), html, at: now } };
+  return Object.fromEntries(
+    Object.entries(next)
+      .filter(([, e]) => now - e.at < PAGE_CACHE_TTL_MS)
+      .sort((a, b) => b[1].at - a[1].at)
+      .slice(0, MAX_PAGES),
+  );
+}
+
 /** Add newly read pages, drop expired ones, and keep the newest MAX_PAGES. */
 export function updateCache(cache: PageCache, pages: ScrapedPage[], now: number): PageCache {
   const next: PageCache = { ...cache };

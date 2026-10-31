@@ -93,7 +93,7 @@ To find every copy that macOS knows about, run this command:
 
 The first build takes a few minutes. The progress view shows each step as the agent works.
 
-**Keep a Morning Tab tab open until the build finishes.** The build runs in the extension's background worker, and any new tab shows it. But Safari can stop that worker when no Morning Tab tab is open. Then an Anthropic build resumes later. A BharatCode build starts again, and it reuses the pages that it read in the last 2 hours.
+**Keep a Morning Tab tab open until the build finishes.** The build runs in the extension's background worker, and any new tab shows it. But Safari can stop that worker when no Morning Tab tab is open. When the worker wakes, an Anthropic build resumes, and a BharatCode build starts again (at most 3 times). Both reuse the pages, and the privacy-filter summaries, from the last 2 hours.
 
 > **Your first homepage is thin.** Safari has no history for the agent to read (see below). To fix this now, [import your Safari history](#improve-this-tab-import-your-safari-history). Otherwise, the homepage gets better over the first few days.
 
@@ -137,6 +137,8 @@ To turn on Apple Intelligence:
 **Settings** shows the status of the on-device model under the filter option.
 
 **The filter is slow.** Apple's on-device model reads each page in up to 3 parts, one part at a time. One part takes 10 to 30 seconds, so the filter adds up to 1.5 minutes for each page. During this time, the build stays on **Opening pages in your browser**. The activity log shows each part, for example "Privacy filter: page 2 of 3, part 1 of 3". If the on-device model does not answer within 2 minutes, Morning Tab does not send that page and continues with the others.
+
+Safari can stop an extension's background work when it looks idle, and a long wait for the on-device model looks idle. To prevent this, an open Morning Tab tab sends the background a short message every 10 seconds during a build. If Safari stops it anyway, the next build continues where it stopped. Morning Tab keeps the filter's summaries for 2 hours, so the filter does not run on those pages again.
 
 The filter is a strong extra protection, not a guarantee. The on-device model can miss a personal detail. The pattern check catches only fixed formats. Use **Sites the agent never reads** for sites that you never want opened.
 

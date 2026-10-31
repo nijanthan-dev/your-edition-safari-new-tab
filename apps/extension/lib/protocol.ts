@@ -45,6 +45,14 @@ export type VisitLogRequest =
   | { kind: "importVisits"; visits: import("./history-import").ImportedVisit[] }
   | { kind: "exportVisits" };
 
+/**
+ * Sent by an open tab every PING_INTERVAL_MS while a build runs. Safari stops
+ * an extension's worker that looks idle, and a long wait for the on-device
+ * model looks idle; each incoming message counts as activity.
+ */
+export type PingRequest = { kind: "ping" };
+export const PING_INTERVAL_MS = 10_000;
+
 // worker → page (broadcast to every connected tab)
 export type BuildMsg =
   | { kind: "snapshot"; state: BuildState }
