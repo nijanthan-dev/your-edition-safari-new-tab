@@ -427,6 +427,10 @@ export async function loadAllowedPages(
     ? await bridge.getPageHtml({
         urls: allowed,
         loadDelayMs: input.loadDelayMs ?? DEFAULTS.loadDelayMs,
+        onProgress: (detail) => {
+          emit.phase("scraping", detail);
+          emit.log(detail);
+        },
       })
     : { pages: [], failed: [] };
 

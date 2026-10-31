@@ -26,8 +26,12 @@ export interface FilteredItem {
  * tokens, shared with the instructions and the answer).
  */
 export const CHUNK_CHARS = 6000;
-/** Later chunks of a very long page are dropped; the agent learns only that they were. */
-export const MAX_CHUNKS = 4;
+/**
+ * Later chunks of a very long page are dropped; the agent learns only that they
+ * were. Each chunk is one on-device model call of 10 to 30 seconds, run one at
+ * a time, so this bounds the filter to about 1.5 minutes a page.
+ */
+export const MAX_CHUNKS = 3;
 export const MAX_ITEMS = 25;
 
 const BLOCK_TAGS = new Set(["p", "div", "li", "br", "tr", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote", "pre", "hr", "figure", "table"]);

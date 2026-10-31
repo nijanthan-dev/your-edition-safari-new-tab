@@ -136,6 +136,8 @@ To turn on Apple Intelligence:
 
 **Settings** shows the status of the on-device model under the filter option.
 
+**The filter is slow.** Apple's on-device model reads each page in up to 3 parts, one part at a time. One part takes 10 to 30 seconds, so the filter adds up to 1.5 minutes for each page. During this time, the build stays on **Opening pages in your browser**. The activity log shows each part, for example "Privacy filter: page 2 of 3, part 1 of 3". If the on-device model does not answer within 2 minutes, Morning Tab does not send that page and continues with the others.
+
 The filter is a strong extra protection, not a guarantee. The on-device model can miss a personal detail. The pattern check catches only fixed formats. Use **Sites the agent never reads** for sites that you never want opened.
 
 Your API keys, the visit log and the page cache stay in the extension's local storage on your Mac. Safari does not sync them. The page cache holds the cleaned pages from the last 2 hours, so a restarted build does not open them again. For more detail, read [ARCHITECTURE.md](./ARCHITECTURE.md#privacy).

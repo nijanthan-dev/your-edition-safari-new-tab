@@ -42,8 +42,9 @@ function fakeBridge() {
       ],
       totalSitesSeen: 1,
     }),
-    getPageHtml: async ({ urls }) => {
+    getPageHtml: async ({ urls, onProgress }) => {
       requested.push(...urls);
+      onProgress?.(`Read page ${urls.length} of ${urls.length}`);
       return {
         pages: urls.map((url) => ({ url, title: "Front page", html: "<h2><a href=\"/a\">Big story</a></h2><p>Details here</p>" })),
         failed: [],
@@ -67,13 +68,14 @@ describe("runHomepageBuildChat", () => {
       "Built a front page from your news site.",
     ]);
     const phases: string[] = [];
+    const logs: string[] = [];
     const result = await runHomepageBuildChat({
       baseUrl: "https://bharatcode.ai/api/model/v1/",
       apiKey: "test-key",
       model: "qwen-3.8-27b",
       bridge,
       fetch: fetchFn,
-      callbacks: { onPhase: (p) => phases.push(p) },
+      callbacks: { onPhase: (p) => phases.push(p), onLog: (l) => logs.push(l) },
     });
 
     expect(result.code).toBe(COMPONENT);
@@ -94,6 +96,8 @@ describe("runHomepageBuildChat", () => {
     expect(phases).toContain("scraping");
     expect(phases).toContain("writing");
     expect(phases.at(-1)).toBe("done");
+    // Progress from the browser shows in the activity log while pages load.
+    expect(logs).toContain("Read page 1 of 1");
   });
 
   test("reminds the model to write, then fails clearly if it never does", async () => {

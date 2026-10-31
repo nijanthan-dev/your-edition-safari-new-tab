@@ -8,12 +8,15 @@ import { extensionStore, KEYS, loadSettings } from "./storage";
 const filterOn = async () => PRIVACY_FILTER_SUPPORTED && (await loadSettings()).privacyFilter;
 
 /** Reuse pages read in the last 2 hours; open tabs only for the rest. */
-async function readPages(urls: string[], loadDelayMs?: number) {
+async function readPages(urls: string[], loadDelayMs?: number, onProgress?: (detail: string) => void) {
   const now = Date.now();
   const cache = (await extensionStore.get<PageCache>(KEYS.pageCache)) ?? {};
   const { hits, misses } = splitCached(cache, urls, now);
-  if (hits.length) console.log(`[bridge] reused ${hits.length} page(s) from the page cache`);
-  const fresh = misses.length ? await scrapeUrls(misses, { loadDelay: loadDelayMs }) : { pages: [], failed: [] };
+  if (hits.length) onProgress?.(`Reused ${hits.length} page(s) read in the last 2 hours`);
+  if (misses.length) onProgress?.(`Opening ${misses.length} page(s) in a background window`);
+  const fresh = misses.length
+    ? await scrapeUrls(misses, { loadDelay: loadDelayMs, onProgress })
+    : { pages: [], failed: [] };
   await extensionStore.set(KEYS.pageCache, updateCache(cache, fresh.pages, now));
   return { pages: [...hits, ...fresh.pages], failed: fresh.failed };
 }
@@ -28,8 +31,10 @@ export const browserBridge: BrowserBridge = {
     const history = await getHistorySites(daysToAnalyze, maxResults);
     return (await filterOn()) ? { ...history, sites: redactSites(history.sites) } : history;
   },
-  getPageHtml: async ({ urls, loadDelayMs }) => {
-    const report = await readPages(urls, loadDelayMs);
-    return (await filterOn()) ? filterPages(report) : report;
+  getPageHtml: async ({ urls, loadDelayMs, onProgress }) => {
+    const report = await readPages(urls, loadDelayMs, onProgress);
+    if (!(await filterOn())) return report;
+    onProgress?.(`Privacy filter: summarizing ${report.pages.length} page(s) on this Mac. This takes up to 1.5 minutes a page.`);
+    return filterPages(report, onProgress);
   },
 };

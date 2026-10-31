@@ -82,6 +82,8 @@ export interface BrowserBridge {
   getPageHtml(args: {
     urls: string[];
     loadDelayMs?: number;
+    /** Short progress notes ("read page 2 of 3"), shown under the step and in the log. */
+    onProgress?: (detail: string) => void;
   }): Promise<{ pages: ScrapedPage[]; failed: Array<{ url: string; reason: string }> }>;
 }
 

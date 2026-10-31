@@ -17,9 +17,10 @@ interface ScrapeOptions {
   timeout?: number; // Maximum time to wait for a page in ms
   extractTimeout?: number; // Maximum time for one content-script extraction in ms
   concurrentTabs?: number; // Number of tabs to process concurrently
+  onProgress?: (detail: string) => void; // Called as each page finishes
 }
 
-const DEFAULT_OPTIONS: Required<ScrapeOptions> = {
+const DEFAULT_OPTIONS: Required<Omit<ScrapeOptions, "onProgress">> = {
   loadDelay: 8000, // 8 seconds default delay after load
   maxRetries: 3,
   retryDelay: 1000, // 1 second initial retry delay
@@ -131,7 +132,7 @@ function withTimeout<T>(promise: Promise<T>, ms: number, label: string): Promise
 async function scrapeUrl(
   url: string,
   windowId: number,
-  opts: Required<ScrapeOptions>,
+  opts: Required<Omit<ScrapeOptions, "onProgress">>,
   addressOf: (tabId: number) => string | undefined
 ): Promise<ScrapedPage | null> {
   let tabId: number | undefined;
@@ -284,10 +285,13 @@ export async function scrapeUrls(
     // only its own slot, not a whole batch.
     const results: (ScrapedPage | null)[] = new Array(urls.length).fill(null);
     let next = 0;
+    let done = 0;
     const worker = async () => {
       while (next < urls.length) {
         const i = next++;
         results[i] = await scrapeUrl(urls[i], windowId, opts, addressOf);
+        done++;
+        opts.onProgress?.(`Read page ${done} of ${urls.length}${results[i] ? "" : " (failed)"}`);
       }
     };
     await Promise.all(Array.from({ length: Math.min(opts.concurrentTabs, urls.length) }, worker));

@@ -199,7 +199,8 @@ existing agents are not re-versioned.
 **On-device privacy filter (Safari, opt-in).** With the setting on, the bridge
 passes every scraped page through `filterPages` before agent-core sees it. The
 page becomes plain text with links replaced by `[n]` markers, split into chunks
-of at most 6,000 characters (4 per page) to fit the on-device model's 4,096-token
+of at most 6,000 characters (3 per page, run one at a time; each native request
+times out after 2 minutes) to fit the on-device model's 4,096-token
 context. Each chunk goes over `runtime.sendNativeMessage` to
 `SafariWebExtensionHandler`, which runs a Foundation Models session with guided
 generation (`@Generable`) and returns `{ link, title, summary }` items. The model
@@ -208,7 +209,9 @@ and hrefs are taken from the page. Titles, summaries and history titles then pas
 a regex redaction (emails, phone numbers, long digit runs). The filter fails
 closed: if the model is unavailable or a request fails, the page is reported in
 `failed` and nothing from it is uploaded. The native handler logs only error
-types, never page text. Redaction is best effort; the blocked-sites list is still
+types, never page text. Progress ("Privacy filter: page 2 of 3, part 1 of 3") reaches the
+activity log through the bridge's `onProgress` callback, which agent-core
+forwards as a `scraping` phase detail and a log line. Redaction is best effort; the blocked-sites list is still
 the hard control.
 
 The session event log persists every domain, title and scraped page body server-side
