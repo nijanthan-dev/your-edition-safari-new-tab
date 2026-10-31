@@ -10,16 +10,24 @@ import { WEBSITE_ACCESS_HELP } from "./platform";
  */
 const ALL_SITES = { origins: ["<all_urls>"] };
 
+/** Whether the extension already has website access. */
+export async function hasHostAccess(): Promise<boolean> {
+  return browser.permissions.contains(ALL_SITES).catch(() => false);
+}
+
+/** How long a build waits for Safari's website-access prompt before it starts anyway. */
+export const HOST_ACCESS_WAIT_MS = 15_000;
+
 /**
  * Ask for website access. Call it straight from a click: Safari shows its
- * prompt only for a user gesture. Resolves at once when access is already granted.
+ * prompt only for a user gesture. Safari can leave the prompt hidden, so this
+ * gives up after HOST_ACCESS_WAIT_MS: the build then starts, and without access
+ * it ends with a message that says what to do, never a silent wait.
  */
 export async function requestHostAccess(): Promise<boolean> {
-  try {
-    return await browser.permissions.request(ALL_SITES);
-  } catch {
-    return false;
-  }
+  const request = browser.permissions.request(ALL_SITES).catch(() => false);
+  const timeout = new Promise<boolean>((resolve) => setTimeout(() => resolve(false), HOST_ACCESS_WAIT_MS));
+  return Promise.race([request, timeout]);
 }
 
 /** Turn a failed request into a message that says what to do. */

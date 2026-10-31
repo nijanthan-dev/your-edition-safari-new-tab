@@ -86,6 +86,7 @@ Morning Tab is the name of this project before version 0.2. After the upgrade, S
 | **Your Edition** is not in the extension list | **Allow unsigned extensions** is off. Safari turns it off each time Safari quits. | Open **Develop → Developer Settings…** and select **Allow unsigned extensions** again. Then open **Your Edition.app** one time. |
 | **Your Edition** shows 2 or more times | macOS has more than one copy of the app, for example from **Run** in Xcode | Delete every copy except the one in Applications. To find them, run the command below. |
 | "Connection error." or "has no website access" | Safari has not given Your Edition website access | Click **Build today's edition** and allow access in the prompt. Or open **Settings → Extensions → Your Edition** and click **Always Allow on Every Website…**. |
+| The build stays on **Preparing agent**, or says "Waiting for website access" | Safari has not given Your Edition website access, and its prompt did not show. A reinstall can reset this access. | Open **Settings → Extensions → Your Edition** and click **Always Allow on Every Website…**. Then click **↻ Rebuild**. |
 | The privacy filter status says "not available" | Apple Intelligence is off or still downloading | See [The on-device privacy filter](#the-on-device-privacy-filter-optional). |
 | Safari crashes during an install | Safari 27 crashes when it loads a replaced extension while it runs. This is a bug in Safari. | Quit Safari before you run `install:safari`. The command asks you to do this. |
 

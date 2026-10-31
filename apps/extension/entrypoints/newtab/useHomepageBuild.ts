@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { requestHostAccess } from "@/lib/host-access";
+import { hasHostAccess, requestHostAccess } from "@/lib/host-access";
+import { WEBSITE_ACCESS_HELP } from "@/lib/platform";
 import {
   AGENT_PORT,
   INITIAL_BUILD_STATE,
@@ -75,14 +76,19 @@ export function useHomepageBuild(onDone: (code: string) => void) {
   }, [state.running]);
 
   const build = useCallback((opts?: { resume?: boolean }) => {
-    // Inside the click, so Safari can show its website-access prompt. The build
-    // starts either way; without access it ends with a message that says so.
-    void requestHostAccess().then(() =>
-      portRef.current?.postMessage({ kind: "startBuild", resume: opts?.resume } satisfies PageMsg),
-    );
+    const start = () => portRef.current?.postMessage({ kind: "startBuild", resume: opts?.resume } satisfies PageMsg);
     // Optimistic: flip to the build screen now; the worker's snapshot and
     // deltas take over from here.
     setState({ ...INITIAL_BUILD_STATE, running: true, phase: "setup" });
+    // Ask inside the click, so Safari can show its prompt. With access already
+    // granted, start at once. Otherwise say on screen what the build waits for.
+    // The build starts either way; without access it ends with a message that says so.
+    const asking = requestHostAccess();
+    void hasHostAccess().then((granted) => {
+      if (granted) return start();
+      setState((s) => ({ ...s, detail: `Waiting for website access. ${WEBSITE_ACCESS_HELP}` }));
+      void asking.then(start);
+    });
   }, []);
 
   const cancel = useCallback(() => {
