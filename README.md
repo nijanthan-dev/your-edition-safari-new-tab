@@ -266,7 +266,7 @@ To rebuild now, click **↻ Rebuild** at the top right.
 
 - **Cost.** With Anthropic, your key pays for each build. The cost depends on the quantity of text that the agent reads. BharatCode charges a flat monthly fee instead. To build only when you ask, turn off automatic rebuilds.
 - **What the agent reads.** The agent ranks the sites you visit and opens up to 8 of them in each build. It skips search engines, webmail, banking and logged-out marketing pages.
-- **Links are real.** Each link on your page comes from a page that the agent read. The agent has an instruction to never invent a URL.
+- **Links are real.** Each link on your page comes from a page that the agent read. The agent has an instruction to never invent a URL. A click opens the site in the same tab. ⌘-click opens it in a new tab.
 - **Updates.** Pull the new code with `git pull`, then run `npx pnpm@10.11.1 install:safari`.
 
 ## How it works

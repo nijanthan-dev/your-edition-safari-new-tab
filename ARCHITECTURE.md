@@ -72,6 +72,10 @@ worker is asleep paints instantly.
 The finished component renders inside a Sandpack iframe
 (`entrypoints/newtab/components/HomepagePreview.tsx`): it is model-written code, so
 it runs sandboxed, not in the extension's own page.
+Sites refuse to load inside that frame, so the frame does not follow links. It
+sends each http(s) link click to the new tab with `postMessage`. The new tab
+checks the sender's origin (`*.codesandbox.io`) and the URL scheme, then opens
+the link in the same tab, or in a new tab for a ⌘-click or middle click.
 
 ## Layout
 
